@@ -1,0 +1,19 @@
+{
+  "name": "小小车标大冒险",
+  "short_name": "认车标",
+  "description": "专为幼儿园小朋友打造的汽车车标认知与车库养成小游戏",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFFBF2",
+  "theme_color": "#FF6B35",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "./assets/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

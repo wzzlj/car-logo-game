@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="认车标" />
+  <meta name="theme-color" content="#FF6B35" />
+  <title>小小车标大冒险</title>
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="apple-touch-icon" href="./assets/icons/icon.svg" />
+  <link rel="icon" type="image/svg+xml" href="./assets/icons/icon.svg" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <!-- Top HUD -->
+    <header id="top-bar" class="top-bar">
+      <button id="profile-pill" class="profile-pill" aria-label="切换小朋友档案">
+        <span id="profile-avatar" class="avatar-badge">🚗</span>
+        <span id="profile-name" class="profile-name">小车手</span>
+      </button>
+
+      <div class="hud-stats">
+        <div class="stat-chip star-chip" title="星星">
+          <span class="stat-icon">⭐</span>
+          <span id="hud-stars">0</span>
+        </div>
+        <div class="stat-chip coin-chip" title="车币">
+          <span class="stat-icon">🪙</span>
+          <span id="hud-coins">0</span>
+        </div>
+      </div>
+
+      <button id="btn-parent" class="icon-btn parent-btn" aria-label="家长模式" title="家长模式">
+        <span>🔒</span>
+      </button>
+    </header>
+
+    <!-- Backup / PWA Reminder Banner (conditional) -->
+    <div id="notice-banner" class="notice-banner hidden"></div>
+
+    <!-- Main Screen Container -->
+    <main id="screen-root" class="screen-root" role="main"></main>
+
+    <!-- Bottom Tab Bar (hidden during active gameplay) -->
+    <nav id="bottom-nav" class="bottom-nav" aria-label="主导航">
+      <button class="nav-tab active" data-tab="map">
+        <span class="nav-emoji">🗺️</span>
+        <span class="nav-label">闯关</span>
+      </button>
+      <button class="nav-tab" data-tab="garage">
+        <span class="nav-emoji">🏠</span>
+        <span class="nav-label">车库</span>
+      </button>
+      <button class="nav-tab" data-tab="encyclopedia">
+        <span class="nav-emoji">📖</span>
+        <span class="nav-label">图鉴</span>
+      </button>
+    </nav>
+
+    <!-- Modal / Overlay Layer (Meal Break, Eye Rest, Parent Lock, Celebrations, QR) -->
+    <div id="overlay-root" class="overlay-root hidden"></div>
+    <!-- Floating Confetti / Star Burst Layer -->
+    <div id="fx-layer" class="fx-layer" aria-hidden="true"></div>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

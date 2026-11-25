@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FF9A3C"/>
+      <stop offset="100%" stop-color="#FF5733"/>
+    </linearGradient>
+    <linearGradient id="car" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFE066"/>
+      <stop offset="100%" stop-color="#FFB703"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="196" fill="#FFFFFF" fill-opacity="0.16"/>
+  <!-- Cute Car Silhouette -->
+  <path d="M116 296 C116 250 146 218 188 214 L214 170 C226 152 246 144 274 144 L318 144 C346 144 366 158 378 184 L394 218 C422 224 440 248 440 282 L440 318 C440 334 428 346 412 346 L132 346 C122 346 116 336 116 322 Z" fill="url(#car)" stroke="#FFFFFF" stroke-width="12" stroke-linejoin="round"/>
+  <!-- Windows -->
+  <path d="M222 176 L268 176 L268 220 L198 220 Z" fill="#4CC9F0" stroke="#FFFFFF" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M286 176 L336 176 C350 176 360 184 366 198 L374 220 L286 220 Z" fill="#4CC9F0" stroke="#FFFFFF" stroke-width="8" stroke-linejoin="round"/>
+  <!-- Wheels -->
+  <circle cx="186" cy="346" r="44" fill="#2B2D42" stroke="#FFFFFF" stroke-width="10"/>
+  <circle cx="186" cy="346" r="18" fill="#EDF2F4"/>
+  <circle cx="364" cy="346" r="44" fill="#2B2D42" stroke="#FFFFFF" stroke-width="10"/>
+  <circle cx="364" cy="346" r="18" fill="#EDF2F4"/>
+  <!-- Star Badge -->
+  <polygon points="274,244 282,262 302,264 287,277 291,296 274,286 257,296 261,277 246,264 266,262" fill="#FF5733" stroke="#FFFFFF" stroke-width="5" stroke-linejoin="round"/>
+</svg>
