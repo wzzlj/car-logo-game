@@ -2,14 +2,15 @@
 // 1. 优先尝试加载本地 assets/cars/<id>.jpg（如用户运行 scripts/fetch_wikimedia_assets.py 下载了维基共享资源真车图）
 // 2. 默认即时呈现按品牌真实车身造型（轿车/SUV/方盒子越野/跑车/MPV/萌系小车/皮卡）+ 标志性前脸特征 + 实车配色绘制的高清矢量实车视图
 
-import { renderLogoSVG } from './logos.js';
+import { REAL_LOGO_MAP } from './logoManifest.js';
 
 export function renderCarSVG(brand, { showBadge = true, customColor = null } = {}) {
   const color = customColor || brand.carColor || '#3A86FF';
   const type = brand.bodyType || 'sedan';
   const isLightBar = ['lixiang', 'xpeng', 'nio', 'xiaomi', 'aito', 'deepal', 'avatr'].includes(brand.id);
-  const badgeHtml = showBadge
-    ? `<g transform="translate(152, 74) scale(0.24)">${renderLogoSVG(brand.id).replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g>`
+  const logoUrl = REAL_LOGO_MAP[brand.id];
+  const badgeHtml = showBadge && logoUrl
+    ? `<circle cx="164" cy="86" r="15" fill="#FFFFFF" opacity="0.92"/><image href="${logoUrl}" x="152" y="74" width="24" height="24" preserveAspectRatio="xMidYMid meet"/>`
     : '';
 
   let bodyPath = '';

@@ -559,10 +559,31 @@ input, textarea, select {
   position: relative;
 }
 
-.logo-stage svg {
+.logo-stage svg,
+.logo-stage img.brand-logo-img {
   width: 100%;
   height: 100%;
+  object-fit: contain;
   display: block;
+}
+
+.brand-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+}
+
+.brand-logo-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 20px;
+  color: var(--ink);
 }
 
 .variant-chips {
@@ -646,9 +667,11 @@ input, textarea, select {
   box-shadow: 0 2px 0 #CBD5E1;
 }
 
-.option-tile svg {
-  width: 88px;
-  height: 88px;
+.option-tile svg,
+.option-tile img.brand-logo-img {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
 }
 
 .option-tile.car-option {
@@ -736,9 +759,11 @@ input, textarea, select {
   box-shadow: 0 5px 0 var(--success-dark);
 }
 
-.memory-back svg {
+.memory-back svg,
+.memory-back img.brand-logo-img {
   width: 100%;
   height: 100%;
+  object-fit: contain;
 }
 
 /* Puzzle Mode (2x2 tap-to-swap / tap-to-place) */
@@ -935,9 +960,11 @@ input, textarea, select {
   background: #FFFDF5;
 }
 
-.brand-cell svg {
-  width: 62px;
-  height: 62px;
+.brand-cell svg,
+.brand-cell img.brand-logo-img {
+  width: 68px;
+  height: 68px;
+  object-fit: contain;
 }
 
 .brand-cell-name {

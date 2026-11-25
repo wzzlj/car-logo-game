@@ -1,4 +1,4 @@
-const CACHE_NAME = 'car-logo-game-v1';
+const CACHE_NAME = 'car-logo-game-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -7,6 +7,7 @@ const ASSETS = [
   './assets/icons/icon.svg',
   './src/main.js',
   './src/data/brands.js',
+  './src/data/logoManifest.js',
   './src/data/logos.js',
   './src/data/cars.js',
   './src/data/levels.js',
