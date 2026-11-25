@@ -1,7 +1,6 @@
 // 家长模式：算术家长锁、吃饭模式、护眼/每日时长、学习报告、跳关/重置、多孩管理、导出码+二维码迁移、版权说明
 
 import { BRANDS, BRAND_MAP } from '../data/brands.js';
-import { LEVELS } from '../data/levels.js';
 import { store } from '../engine/storage.js';
 import { audio } from '../engine/audio.js';
 import { renderQRToCanvas } from '../engine/qr.js';
@@ -137,21 +136,14 @@ function openParentPanel({ overlays, onStateChanged, onTestMealMode }) {
       </div>
     </div>
 
-    <!-- 4. 关卡控制 -->
+    <!-- 4. 学习进度管理 -->
     <div class="parent-section">
-      <h3>🗺️ 关卡管理</h3>
-      <div class="setting-row">
-        <span>跳到指定关卡</span>
-        <div style="display:flex;gap:6px;">
-          <select id="sel-jump" style="padding:6px 8px;border-radius:10px;border:1px solid #CBD5E1;font-weight:800;">
-            ${LEVELS.map((lv) => `<option value="${lv.id}">第${lv.id}关</option>`).join('')}
-          </select>
-          <button id="btn-jump" class="btn btn-secondary btn-sm">解锁</button>
-        </div>
+      <h3>📖 学习进度管理</h3>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <button id="btn-learn-all" class="btn btn-secondary btn-sm btn-block">✨ 标记全部 50 个车标已学（全图鉴混玩）</button>
+        <button id="btn-reset" class="btn btn-danger btn-sm btn-block">🗑️ 重置当前孩子学习进度</button>
       </div>
-      <div style="margin-top:8px;display:flex;gap:8px;">
-        <button id="btn-reset" class="btn btn-danger btn-sm btn-block">🗑️ 重置当前孩子关卡进度</button>
-      </div>
+      <div id="progress-msg" style="font-size:12px;font-weight:800;color:#1C968A;margin-top:6px;"></div>
     </div>
 
     <!-- 5. 跨手机进度导出与导入（存档码 + 二维码） -->
@@ -226,22 +218,18 @@ function openParentPanel({ overlays, onStateChanged, onTestMealMode }) {
     onTestMealMode();
   };
 
-  const jumpMsg = document.createElement('div');
-  jumpMsg.style.cssText = 'font-size:12px;font-weight:800;color:#1C968A;margin-top:6px;';
-  el.querySelector('#btn-jump').parentElement.parentElement.after(jumpMsg);
-
-  el.querySelector('#btn-jump').onclick = () => {
-    const lv = Number(el.querySelector('#sel-jump').value);
-    store.jumpToLevel(lv);
+  const progressMsg = el.querySelector('#progress-msg');
+  el.querySelector('#btn-learn-all').onclick = () => {
+    store.markLearned(BRANDS.map((b) => b.id));
     audio.correct();
-    jumpMsg.textContent = `✅ 已解锁到第 ${lv} 关！`;
+    progressMsg.textContent = '✅ 已全部标记为已学，现在所有玩法都会随机混合全部 50 个车标！';
     onStateChanged();
   };
 
   el.querySelector('#btn-reset').onclick = () => {
     overlays.showConfirm(
       '🗑️ 确认重置进度',
-      `确定要重置「${p.name}」的关卡与星星进度吗？（车库已买物品不受影响）`,
+      `确定要重置「${p.name}」的学习进度、星星和车币吗？（车库已买物品不受影响）`,
       () => {
         store.resetActiveProgress();
         audio.click();

@@ -1,11 +1,11 @@
-// 应用主控制器：统一调度导航、游戏模式、吃饭模式计数、护眼计时与 PWA 注册
+// 应用主控制器：点开即玩的“学新标 + 混玩已学车标”循环 + 自由小游戏 + 吃饭模式与护眼计时
 
-import { BRANDS } from './data/brands.js';
-import { LEVELS } from './data/levels.js';
+import { BRANDS, BRAND_MAP } from './data/brands.js';
+import { MIXED_LEARNING_ORDER } from './data/levels.js';
 import { store } from './engine/storage.js';
 import { audio } from './engine/audio.js';
 import { createOverlayManager } from './ui/overlays.js';
-import { renderMapScreen } from './ui/map.js';
+import { renderMapScreen, getNextBatchToLearn } from './ui/map.js';
 import { renderGarageScreen } from './ui/garage.js';
 import { renderEncyclopediaScreen } from './ui/encyclopedia.js';
 import { openParentGate } from './ui/parent.js';
@@ -27,10 +27,8 @@ let inGameplay = false;
 let mealAnswerCounter = 0;
 let sessionSeconds = 0;
 
-// 首次触碰解锁 iOS AudioContext
 window.addEventListener('pointerdown', () => audio.unlock(), { once: true });
 
-// 注册 PWA Service Worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
@@ -50,7 +48,6 @@ function syncHUD() {
     tab.classList.toggle('active', tab.dataset.tab === currentTab);
   });
 
-  // 定期提醒家长备份（预防 iPhone Safari 7天自动清理缓存）
   if (!inGameplay && store.needsBackupReminder()) {
     noticeBanner.classList.remove('hidden');
     noticeBanner.innerHTML = `
@@ -71,7 +68,6 @@ function triggerTestMeal() {
   overlays.showMealBreak(store.state.settings.mealDurationSec || 60, () => {});
 }
 
-// 吃饭模式钩子：无论答对或答错都计数，达到阈值立即弹出吃饭倒计时
 function handleAnswerTracked(_isCorrect, resumeCallback) {
   const s = store.state.settings;
   if (!s.mealModeEnabled) return false;
@@ -84,95 +80,137 @@ function handleAnswerTracked(_isCorrect, resumeCallback) {
   return false;
 }
 
-function startLevel(level) {
+function getPlayablePool() {
   const scope = store.state.settings.scope;
-  let brandIds = [...level.brandIds];
-  if (scope === 'cn') {
-    brandIds = brandIds.filter((id) => BRANDS.find((b) => b.id === id && b.origin === 'cn'));
-    if (brandIds.length === 0) brandIds = ['byd', 'wuling', 'xiaomi', 'hongqi'];
-  }
+  const learned = store.getLearnedBrandIds().filter((id) => {
+    const b = BRAND_MAP[id];
+    return b && (scope === 'cn' ? b.origin === 'cn' : true);
+  });
+  // 如果还没学够 6 个，自动补入前几个热门国产+国际明星品牌，确保点开就能玩
+  const fallback = MIXED_LEARNING_ORDER.filter((id) => {
+    const b = BRAND_MAP[id];
+    return b && (scope === 'cn' ? b.origin === 'cn' : true);
+  });
+  const merged = [...new Set([...learned, ...fallback.slice(0, 8)])];
+  return merged;
+}
 
+// 核心循环：先学 3 个新标（国产+国际混合）-> 自动把以前学过的全混在一起识别玩！
+function startLearnAndPlay(newBatchIds) {
   inGameplay = true;
   syncHUD();
 
-  const exitToMap = () => {
+  const exitToHome = () => {
     inGameplay = false;
     currentTab = 'map';
     renderCurrentTab();
   };
 
-  const launchPlayMode = () => {
-    const onComplete = ({ stars }) => {
-      store.completeLevel(level.id, stars, level.rewardCoins);
-      const nextLv = LEVELS.find((l) => l.id === level.id + 1);
-      overlays.showVictory({
-        title: level.title,
-        stars,
-        rewardCoins: level.rewardCoins,
-        onNext: nextLv ? () => startLevel(nextLv) : null,
-        onMap: exitToMap
+  runLearnPhase(screenRoot, {
+    brandIds: newBatchIds,
+    onComplete: () => {
+      store.markLearned(newBatchIds);
+      const learnedPool = getPlayablePool();
+      // 混合：本次新学的 3 个 + 从以前学过的随机抽 3 个 = 6 题趣味混合大挑战
+      const oldOnes = learnedPool.filter((id) => !newBatchIds.includes(id)).sort(() => Math.random() - 0.5).slice(0, 3);
+      const roundIds = [...newBatchIds, ...oldOnes];
+      const rewardCoins = 20;
+
+      runQuizMode(screenRoot, {
+        level: { title: '混合认车标挑战', mode: 'mixed', rewardCoins },
+        brandIds: roundIds,
+        isPaused: () => !overlayRoot.classList.contains('hidden'),
+        onAnswerTracked: handleAnswerTracked,
+        onBurstFX: overlays.burstFX,
+        onComplete: ({ stars }) => {
+          store.completeRound(stars, rewardCoins);
+          const nextBatch = getNextBatchToLearn(store.state.settings.scope, 3);
+          overlays.showVictory({
+            title: '本轮车标挑战',
+            stars,
+            rewardCoins,
+            onNext: () => startLearnAndPlay(nextBatch),
+            onMap: exitToHome
+          });
+        },
+        onExit: exitToHome
       });
-    };
-
-    const common = {
-      level,
-      brandIds,
-      isPaused: () => !overlayRoot.classList.contains('hidden'),
-      onAnswerTracked: handleAnswerTracked,
-      onBurstFX: overlays.burstFX,
-      onComplete,
-      onExit: exitToMap
-    };
-
-    if (level.mode === 'memory') {
-      runMemoryMode(screenRoot, common);
-    } else if (level.mode === 'puzzle') {
-      runPuzzleMode(screenRoot, common);
-    } else {
-      runQuizMode(screenRoot, common);
-    }
-  };
-
-  if (level.learnFirst) {
-    // 修复 #4：学习本关全部品牌，不再截断前4个
-    runLearnPhase(screenRoot, {
-      brandIds,
-      onComplete: launchPlayMode,
-      onExit: exitToMap
-    });
-  } else {
-    launchPlayMode();
-  }
+    },
+    onExit: exitToHome
+  });
 }
 
-function startCustomQuiz(title, brandIds, mode = 'listen') {
-  const virtualLevel = {
-    id: 0,
-    title,
-    mode,
-    brandIds,
-    learnFirst: false,
-    rewardCoins: 25
-  };
+// 自由模式：真车放大猜 / 听音混搭 / 翻牌 / 拼图 / 极速快答
+function startFreeMode(mode) {
+  const pool = getPlayablePool().sort(() => Math.random() - 0.5);
   inGameplay = true;
   syncHUD();
-  const exitToMap = () => {
+
+  const exitToHome = () => {
+    inGameplay = false;
+    currentTab = 'map';
+    renderCurrentTab();
+  };
+
+  const modeConfig = {
+    car2logo: { title: '真车放大猜', count: 6, rewardCoins: 20 },
+    listen: { title: '听音混搭猜', count: 6, rewardCoins: 18 },
+    memory: { title: '翻牌记忆乐', count: 4, rewardCoins: 20 },
+    puzzle: { title: '车标小拼图', count: 3, rewardCoins: 22 },
+    boss: { title: '极速快答挑战', count: 8, rewardCoins: 35, timeLimit: 45 }
+  };
+  const cfg = modeConfig[mode] || modeConfig.listen;
+  const chosen = pool.slice(0, cfg.count);
+
+  const common = {
+    level: { title: cfg.title, mode, timeLimit: cfg.timeLimit || 0, rewardCoins: cfg.rewardCoins },
+    brandIds: chosen,
+    isPaused: () => !overlayRoot.classList.contains('hidden'),
+    onAnswerTracked: handleAnswerTracked,
+    onBurstFX: overlays.burstFX,
+    onComplete: ({ stars }) => {
+      store.completeRound(stars, cfg.rewardCoins);
+      overlays.showVictory({
+        title: cfg.title,
+        stars,
+        rewardCoins: cfg.rewardCoins,
+        onNext: () => startFreeMode(mode),
+        onMap: exitToHome
+      });
+    },
+    onExit: exitToHome
+  };
+
+  if (mode === 'memory') runMemoryMode(screenRoot, common);
+  else if (mode === 'puzzle') runPuzzleMode(screenRoot, common);
+  else runQuizMode(screenRoot, common);
+}
+
+function startMistakeReview(ids) {
+  inGameplay = true;
+  syncHUD();
+  const exitToHome = () => {
     inGameplay = false;
     currentTab = 'map';
     renderCurrentTab();
   };
   runQuizMode(screenRoot, {
-    level: virtualLevel,
-    brandIds,
+    level: { title: '错题小复习', mode: 'mixed', rewardCoins: 18 },
+    brandIds: ids,
+    isPaused: () => !overlayRoot.classList.contains('hidden'),
     onAnswerTracked: handleAnswerTracked,
     onBurstFX: overlays.burstFX,
     onComplete: ({ stars }) => {
-      const p = store.getActiveProfile();
-      p.coins += 25;
-      store.save();
-      overlays.showVictory({ title, stars, rewardCoins: 25, onNext: null, onMap: exitToMap });
+      store.completeRound(stars, 18);
+      overlays.showVictory({
+        title: '错题小复习',
+        stars,
+        rewardCoins: 18,
+        onNext: null,
+        onMap: exitToHome
+      });
     },
-    onExit: exitToMap
+    onExit: exitToHome
   });
 }
 
@@ -182,15 +220,9 @@ function renderCurrentTab() {
 
   if (currentTab === 'map') {
     renderMapScreen(screenRoot, {
-      onStartLevel: startLevel,
-      onStartMistakeReview: (ids) => startCustomQuiz('错题小复习', ids, 'listen'),
-      onStartFreeQuiz: () => {
-        const pool = store.state.settings.scope === 'cn'
-          ? BRANDS.filter((b) => b.origin === 'cn')
-          : BRANDS;
-        const picked = [...pool].sort(() => Math.random() - 0.5).slice(0, 6).map((b) => b.id);
-        startCustomQuiz('随机趣味挑战', picked, 'listen');
-      }
+      onStartLearnAndPlay: startLearnAndPlay,
+      onStartMode: startFreeMode,
+      onStartMistakeReview: startMistakeReview
     });
   } else if (currentTab === 'garage') {
     renderGarageScreen(screenRoot, { onBurstFX: overlays.burstFX });
@@ -202,7 +234,6 @@ function renderCurrentTab() {
   }
 }
 
-// 绑定底部导航与顶部按钮
 document.querySelectorAll('.nav-tab').forEach((btn) => {
   btn.onclick = () => {
     audio.click();
@@ -229,7 +260,6 @@ document.getElementById('profile-pill').onclick = () => {
   });
 };
 
-// 每 10 秒统计游玩时长，触发护眼提醒或每日时长上限
 setInterval(() => {
   if (document.hidden) return;
   sessionSeconds += 10;
@@ -250,5 +280,4 @@ setInterval(() => {
   }
 }, 10000);
 
-// 启动渲染
 renderCurrentTab();

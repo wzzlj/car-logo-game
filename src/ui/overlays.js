@@ -63,8 +63,8 @@ export function createOverlayManager(overlayRoot, fxLayer) {
           🪙 +${rewardCoins} 车币
         </div>
         <div style="display:flex;flex-direction:column;gap:10px;">
-          ${onNext ? `<button id="vic-next" class="btn btn-primary btn-block">🚀 下一关</button>` : ''}
-          <button id="vic-map" class="btn btn-soft btn-block">🗺️ 返回地图</button>
+          ${onNext ? `<button id="vic-next" class="btn btn-primary btn-block">🚀 再来一局！</button>` : ''}
+          <button id="vic-map" class="btn btn-soft btn-block">🏠 返回首页</button>
         </div>
       </div>
     `, { dismissible: false });

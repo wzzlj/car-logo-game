@@ -1,13 +1,12 @@
-// 多玩法答题引擎：听音选标 (listen)、真车配对 (car2logo)、颜色侦探 (color)、Boss 限时快答 (boss)
-// 修复：
-// - 颜色侦探仅使用有鲜明标志色的品牌，并用高对比滤镜生成明显不同的错色干扰项
-// - 看车标找真车模式隐藏车型文字防泄题，答对后再播报车型名
-// - Boss 关倒计时在吃饭模式/护眼弹窗期间自动暂停
-// - 喇叭按钮带呼吸提示，兼容 iOS Safari 语音策略
+// 多玩法答题引擎：混合识别 (mixed)、听音选标 (listen)、真车特写放大猜标 (car2logo)、限时快答 (boss)
+// 核心升级：
+// 1. “看真车猜车标”默认放大居中展示 + 支持点击「🔍 放大看车标」(2.2x 特写) +「🔄 换个角度」(切换2张实拍图)
+// 2. 支持点击照片任意位置作为放大焦点，方便小朋友把镜头直接对准车头/车尾车标！
+// 3. 答题时隐藏车型文字防泄题；Boss 倒计时在吃饭/护眼弹窗期间自动暂停
 
 import { BRANDS, BRAND_MAP } from '../data/brands.js';
-import { renderLogoSVG, getWrongColors, COLORFUL_BRAND_IDS } from '../data/logos.js';
-import { renderCarSVG, renderCarShowcaseHTML, getRealCarPhotoUrl } from '../data/cars.js';
+import { renderLogoSVG } from '../data/logos.js';
+import { renderCarSVG, getRealCarPhotoUrl } from '../data/cars.js';
 import { audio, randomPraise, randomEncourage } from '../engine/audio.js';
 import { store } from '../engine/storage.js';
 
@@ -29,20 +28,16 @@ export function runQuizMode(root, {
   onComplete,
   onExit
 }) {
-  const mode = level.mode;
+  const mode = level.mode; // 'mixed' | 'listen' | 'car2logo' | 'boss'
   const scope = store.state.settings.scope;
   const pool = scope === 'cn' ? BRANDS.filter((b) => b.origin === 'cn') : BRANDS;
 
-  // 融入 1~2 道历史错题帮助巩固记忆（颜色侦探模式仅融入彩色品牌错题）
-  const mistakes = store.getMistakeBrandIds(2).filter((id) => {
-    if (brandIds.includes(id)) return false;
-    if (!pool.some((b) => b.id === id)) return false;
-    if (mode === 'color' && !COLORFUL_BRAND_IDS.includes(id)) return false;
-    return true;
-  });
-
-  const baseQueue = shuffle([...brandIds, ...mistakes.slice(0, mode === 'boss' ? 2 : 1)]);
-  const questionIds = mode === 'boss' ? baseQueue.slice(0, 8) : baseQueue;
+  // 融入 1~2 道历史错题帮助巩固记忆
+  const mistakes = store.getMistakeBrandIds(2).filter(
+    (id) => !brandIds.includes(id) && pool.some((b) => b.id === id)
+  );
+  const baseQueue = shuffle([...brandIds, ...mistakes.slice(0, 2)]);
+  const questionIds = mode === 'boss' ? baseQueue.slice(0, 8) : baseQueue.slice(0, Math.min(8, baseQueue.length));
 
   let qIndex = 0;
   let correctCount = 0;
@@ -68,14 +63,11 @@ export function runQuizMode(root, {
 
   if (mode === 'boss' && timeLeft > 0) {
     timerId = setInterval(() => {
-      // 修复 #7：弹窗（如吃饭休息/护眼提醒）显示期间自动暂停 Boss 倒计时！
       if (isPaused && isPaused()) return;
       timeLeft -= 1;
       const el = root.querySelector('#boss-timer');
       if (el) el.textContent = `⏱️ ${timeLeft}秒`;
-      if (timeLeft <= 0) {
-        finish();
-      }
+      if (timeLeft <= 0) finish();
     }, 1000);
   }
 
@@ -89,89 +81,88 @@ export function runQuizMode(root, {
     const target = BRAND_MAP[targetId];
     const pct = Math.round((qIndex / questionIds.length) * 100);
 
-    // 决定本题子模式（Boss 关仅对 COLORFUL_BRAND_IDS 出颜色题）
+    // 决定本题子模式
     let subMode = mode;
-    if (mode === 'boss') {
-      if (qIndex % 3 === 2 && COLORFUL_BRAND_IDS.includes(target.id)) {
-        subMode = 'color';
-      } else {
-        subMode = qIndex % 2 === 0 ? 'listen' : 'car-to-logo';
-      }
+    if (mode === 'mixed') {
+      const seq = ['listen', 'car-to-logo', 'listen', 'logo-to-car'];
+      subMode = seq[qIndex % seq.length];
+    } else if (mode === 'boss') {
+      subMode = qIndex % 2 === 0 ? 'listen' : 'car-to-logo';
     } else if (mode === 'car2logo') {
-      subMode = qIndex % 2 === 0 ? 'car-to-logo' : 'logo-to-car';
+      subMode = qIndex % 3 === 2 ? 'logo-to-car' : 'car-to-logo';
     }
+
+    const distractors = shuffle(pool.filter((b) => b.id !== target.id)).slice(0, 3);
+    const fourBrands = shuffle([target, ...distractors]);
 
     let options = [];
     let promptHTML = '';
     let speechText = '';
 
-    if (subMode === 'color') {
-      const wrongFilters = shuffle(getWrongColors(target.id)).slice(0, 3);
-      options = shuffle([
-        { key: 'real', isCorrect: true, html: renderLogoSVG(target.id, { variantId: 'default' }) },
-        ...wrongFilters.map((flt, i) => ({
-          key: 'w' + i,
-          isCorrect: false,
-          html: renderLogoSVG(target.id, { colorOverride: flt })
-        }))
-      ]);
-      speechText = `找一找，哪一个是颜色正确的${target.name}车标呢？`;
+    // 真车图片缩放与角度状态
+    let photoIdx = Math.random() < 0.5 ? 1 : 2;
+    let isZoomed = false;
+    let originX = 50;
+    let originY = 55;
+
+    if (subMode === 'car-to-logo') {
+      options = fourBrands.map((b) => ({
+        key: b.id,
+        isCorrect: b.id === target.id,
+        html: renderLogoSVG(b.id, { variantId: 'default' })
+      }));
+      speechText = '看看这辆真车，可以点放大镜看清车标哦，它是哪个牌子呢？';
       promptHTML = `
-        <h2 class="prompt-title">🎨 哪一个才是真正颜色的【${target.name}】？</h2>
-        <button id="q-speak" class="speak-big-btn pulse-speak">🔊 再听一遍</button>
+        <h2 class="prompt-title" style="font-size:18px;margin-bottom:8px;">🚘 看看真车，点放大镜找车标！</h2>
+        <div id="car-zoom-stage" class="car-zoom-stage">
+          <div class="car-svg-wrap" style="height:100%;">${renderCarSVG(target, { showBadge: false })}</div>
+          <img
+            id="car-zoom-img"
+            class="car-zoom-img"
+            src="${getRealCarPhotoUrl(target.id, photoIdx)}"
+            alt="汽车实拍图"
+            style="transform:scale(1.32);transform-origin:50% 55%;"
+            onerror="this.remove()"
+          />
+          <div class="zoom-tip-pill" id="zoom-tip-pill">👆 点图片任意位置放大看车标</div>
+        </div>
+        <div class="zoom-controls">
+          <button id="btn-toggle-zoom" class="btn btn-warning btn-sm" style="flex:1;">🔍 放大看车标</button>
+          ${target.id !== 'aito' ? `<button id="btn-switch-angle" class="btn btn-soft btn-sm" style="flex:1;">🔄 换个角度</button>` : ''}
+          <button id="q-speak" class="btn btn-secondary btn-sm">🔊 提示</button>
+        </div>
+      `;
+    } else if (subMode === 'logo-to-car') {
+      options = fourBrands.map((b) => ({
+        key: b.id,
+        isCorrect: b.id === target.id,
+        isCar: true,
+        html: `<div style="position:relative;width:100%;height:108px;border-radius:14px;overflow:hidden;">${renderCarSVG(b, { showBadge: false })}<img src="${getRealCarPhotoUrl(b.id, 1)}" alt="汽车照片" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scale(1.18);" onerror="this.remove()" /></div>`
+      }));
+      speechText = `请帮${target.name}车标找到它自己的真车吧！`;
+      promptHTML = `
+        <h2 class="prompt-title">🔍 帮【${target.name}】找到它的真车！</h2>
+        <div style="width:92px;height:92px;margin:0 auto 8px;background:#FFFFFF;border-radius:20px;padding:10px;border:2px solid #E2E8F0;display:flex;align-items:center;justify-content:center;">
+          ${renderLogoSVG(target.id, { variantId: 'default' })}
+        </div>
+        <button id="q-speak" class="speak-big-btn btn-sm pulse-speak" style="padding:8px 16px;font-size:15px;">🔊 读出来</button>
       `;
     } else {
-      const distractors = shuffle(pool.filter((b) => b.id !== target.id)).slice(0, 3);
-      const fourBrands = shuffle([target, ...distractors]);
-
-      if (subMode === 'car-to-logo' || subMode === 'car2logo') {
-        options = fourBrands.map((b) => ({
-          key: b.id,
-          isCorrect: b.id === target.id,
-          html: renderLogoSVG(b.id, { variantId: 'default' })
-        }));
-        speechText = `看看这辆漂亮的真车，它是哪个品牌的车标呢？`;
-        const photoIdx = Math.random() < 0.5 ? 1 : 2;
-        promptHTML = `
-          <h2 class="prompt-title">🚘 这辆真车是哪个车标？</h2>
-          <div style="margin:0 auto 10px;">
-            ${renderCarShowcaseHTML(target, { showBadge: false, showCaption: false, photoIdx })}
-          </div>
-          <button id="q-speak" class="speak-big-btn btn-sm pulse-speak" style="padding:8px 16px;font-size:15px;">🔊 听提示</button>
-        `;
-      } else if (subMode === 'logo-to-car') {
-        // 修复 #6：答题时不显示车型文字，防止直接泄题！
-        options = fourBrands.map((b) => ({
-          key: b.id,
-          isCorrect: b.id === target.id,
-          isCar: true,
-          html: `<div style="position:relative;width:100%;height:104px;border-radius:14px;overflow:hidden;">${renderCarSVG(b, { showBadge: false })}<img src="${getRealCarPhotoUrl(b.id, 1)}" alt="汽车照片" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.remove()" /></div>`
-        }));
-        speechText = `请帮${target.name}车标找到它自己的真车吧！`;
-        promptHTML = `
-          <h2 class="prompt-title">🔍 帮【${target.name}】找到它的真车！</h2>
-          <div style="width:92px;height:92px;margin:0 auto 8px;background:#FFFFFF;border-radius:20px;padding:10px;border:2px solid #E2E8F0;display:flex;align-items:center;justify-content:center;">
-            ${renderLogoSVG(target.id, { variantId: 'default' })}
-          </div>
-          <button id="q-speak" class="speak-big-btn btn-sm pulse-speak" style="padding:8px 16px;font-size:15px;">🔊 读出来</button>
-        `;
-      } else {
-        options = fourBrands.map((b) => ({
-          key: b.id,
-          isCorrect: b.id === target.id,
-          html: renderLogoSVG(b.id, { variantId: 'default' })
-        }));
-        speechText = `请找出，${target.name}的车标在哪里？`;
-        promptHTML = `
-          <h2 class="prompt-title">👂 听名字，点一点正确的车标！</h2>
-          <button id="q-speak" class="speak-big-btn pulse-speak">🔊 ${target.name}</button>
-        `;
-      }
+      options = fourBrands.map((b) => ({
+        key: b.id,
+        isCorrect: b.id === target.id,
+        html: renderLogoSVG(b.id, { variantId: 'default' })
+      }));
+      speechText = `请找出，${target.name}的车标在哪里？`;
+      promptHTML = `
+        <h2 class="prompt-title">👂 听名字，点一点正确的车标！</h2>
+        <button id="q-speak" class="speak-big-btn pulse-speak">🔊 ${target.name}</button>
+      `;
     }
 
     root.innerHTML = `
       <div class="play-header">
-        <button id="q-exit" class="icon-btn" aria-label="退出关卡">⬅️</button>
+        <button id="q-exit" class="icon-btn" aria-label="返回首页">⬅️</button>
         <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
         ${mode === 'boss'
           ? `<span id="boss-timer" class="timer-pill">⏱️ ${timeLeft}秒</span>`
@@ -179,7 +170,7 @@ export function runQuizMode(root, {
         }
       </div>
 
-      <div class="prompt-card">
+      <div class="prompt-card" style="padding:14px;">
         ${promptHTML}
       </div>
 
@@ -204,7 +195,62 @@ export function runQuizMode(root, {
     if (speakBtn) {
       speakBtn.onclick = () => {
         audio.click();
-        audio.speak(subMode === 'car-to-logo' ? `这是${target.name}的汽车哦！` : speechText);
+        audio.speak(subMode === 'car-to-logo' ? `提示：这辆车是${target.name}哦！` : speechText);
+      };
+    }
+
+    // 绑定真车放大镜与换角度交互
+    const zoomStage = root.querySelector('#car-zoom-stage');
+    const zoomImg = root.querySelector('#car-zoom-img');
+    const zoomBtn = root.querySelector('#btn-toggle-zoom');
+    const angleBtn = root.querySelector('#btn-switch-angle');
+    const tipPill = root.querySelector('#zoom-tip-pill');
+
+    const applyZoom = () => {
+      if (!zoomImg) return;
+      const scale = isZoomed ? 2.25 : 1.32;
+      zoomImg.style.transformOrigin = `${originX}% ${originY}%`;
+      zoomImg.style.transform = `scale(${scale})`;
+      if (zoomBtn) zoomBtn.textContent = isZoomed ? '🔎 恢复全景' : '🔍 放大看车标';
+      if (tipPill) tipPill.textContent = isZoomed ? '🔍 已放大 2.2 倍 · 再点还原' : '👆 点车标位置局部放大';
+    };
+
+    if (zoomStage && zoomImg) {
+      zoomStage.onclick = (e) => {
+        audio.click();
+        const rect = zoomStage.getBoundingClientRect();
+        if (!isZoomed) {
+          originX = Math.max(15, Math.min(85, Math.round(((e.clientX - rect.left) / rect.width) * 100)));
+          originY = Math.max(15, Math.min(85, Math.round(((e.clientY - rect.top) / rect.height) * 100)));
+          isZoomed = true;
+        } else {
+          isZoomed = false;
+          originX = 50;
+          originY = 55;
+        }
+        applyZoom();
+      };
+    }
+
+    if (zoomBtn) {
+      zoomBtn.onclick = () => {
+        audio.click();
+        isZoomed = !isZoomed;
+        originX = 50;
+        originY = 55;
+        applyZoom();
+      };
+    }
+
+    if (angleBtn && zoomImg) {
+      angleBtn.onclick = () => {
+        audio.click();
+        photoIdx = photoIdx === 1 ? 2 : 1;
+        isZoomed = false;
+        originX = 50;
+        originY = 55;
+        zoomImg.src = getRealCarPhotoUrl(target.id, photoIdx);
+        applyZoom();
       };
     }
 
@@ -219,7 +265,7 @@ export function runQuizMode(root, {
           store.recordAnswer(target.id, true);
           audio.correct();
           setTimeout(() => audio.honk(), 220);
-          const praise = subMode === 'logo-to-car'
+          const praise = (subMode === 'logo-to-car' || subMode === 'car-to-logo')
             ? `答对啦！这就是${target.carModel}！`
             : randomPraise();
           audio.speak(praise);

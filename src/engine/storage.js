@@ -15,9 +15,10 @@ export function createProfile(name = '小车手', avatar = '🚗') {
     name,
     avatar,
     stars: 0,
-    coins: 30,
+    coins: 10,
     unlockedLevel: 1,
     levelStars: {},
+    learnedBrands: [], // 已通过“先学后玩”认识过的车标 ID
     brandStats: {}, // { [brandId]: { r: rightCount, w: wrongCount } }
     dailySeconds: {}, // { 'YYYY-MM-DD': seconds }
     garage: {
@@ -128,13 +129,38 @@ class Store {
 
   recordAnswer(brandId, isCorrect) {
     const p = this.getActiveProfile();
+    if (!Array.isArray(p.learnedBrands)) p.learnedBrands = [];
+    if (!p.learnedBrands.includes(brandId)) p.learnedBrands.push(brandId);
     if (!p.brandStats[brandId]) p.brandStats[brandId] = { r: 0, w: 0 };
     if (isCorrect) {
       p.brandStats[brandId].r += 1;
-      p.coins += 5;
+      p.coins += 3;
     } else {
       p.brandStats[brandId].w += 1;
     }
+    this.save();
+  }
+
+  markLearned(brandIds) {
+    const p = this.getActiveProfile();
+    if (!Array.isArray(p.learnedBrands)) p.learnedBrands = [];
+    brandIds.forEach((id) => {
+      if (!p.learnedBrands.includes(id)) p.learnedBrands.push(id);
+    });
+    this.save();
+  }
+
+  getLearnedBrandIds() {
+    const p = this.getActiveProfile();
+    const set = new Set(Array.isArray(p.learnedBrands) ? p.learnedBrands : []);
+    Object.keys(p.brandStats || {}).forEach((id) => set.add(id));
+    return [...set];
+  }
+
+  completeRound(starsEarned, rewardCoins) {
+    const p = this.getActiveProfile();
+    p.stars += starsEarned;
+    p.coins += rewardCoins;
     this.save();
   }
 
@@ -155,9 +181,10 @@ class Store {
   resetActiveProgress() {
     const p = this.getActiveProfile();
     p.stars = 0;
-    p.coins = 30;
+    p.coins = 10;
     p.unlockedLevel = 1;
     p.levelStars = {};
+    p.learnedBrands = [];
     p.brandStats = {};
     this.save();
   }
