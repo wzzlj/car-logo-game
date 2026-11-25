@@ -1,4 +1,4 @@
-// 自动生成的 50 个品牌真实车标 + 经典旧标资源清单（来源：Wikimedia Commons / Wikipedia）
+// 50 个品牌真实车标清单（含纯车头徽标、经典旧标与带字母完整标）
 export const REAL_LOGO_MAP = {
   "byd": "./assets/logos/byd.svg",
   "yangwang": "./assets/logos/yangwang.svg",
@@ -56,3 +56,5 @@ export const REAL_CLASSIC_LOGO_MAP = {
   "geely": "./assets/logos/geely_classic.svg",
   "buick": "./assets/logos/buick_classic.svg"
 };
+
+export const REAL_WORDMARK_MAP = {};

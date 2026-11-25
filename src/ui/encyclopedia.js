@@ -1,7 +1,7 @@
 // 50个车标有声图鉴（支持按国产/进口/已掌握筛选，点击查看新旧标、颜色变体与真车外观）
 
 import { BRANDS, BRAND_MAP } from '../data/brands.js';
-import { renderLogoSVG } from '../data/logos.js';
+import { renderLogoSVG, hasFullWordmark, isIconOnlyOnHood } from '../data/logos.js';
 import { renderCarShowcaseHTML } from '../data/cars.js';
 import { store } from '../engine/storage.js';
 import { audio } from '../engine/audio.js';
@@ -62,16 +62,23 @@ export function renderEncyclopediaScreen(root, { showModal, closeModal }) {
 }
 
 function openBrandDetail(brand, showModal, closeModal) {
-  let activeVid = brand.variants[0].id;
+  let activeVid = 'default';
 
   function renderDetail() {
+    const chips = brand.variants.map((v) => ({ id: v.id, label: v.label }));
+    if (hasFullWordmark(brand.id)) {
+      chips[0] = { id: 'default', label: '🚘 车头纯图标' };
+      chips.splice(1, 0, { id: 'wordmark', label: '🔤 带字母完整标' });
+    }
+    const showHoodTip = isIconOnlyOnHood(brand.id);
+
     const html = `
       <div class="modal-header">
         <h2 class="modal-title">${brand.name} <span style="font-size:13px;color:#64748B;font-weight:700;">${brand.en}</span></h2>
         <button id="detail-close" class="icon-btn">✖️</button>
       </div>
       <div style="display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;">
-        <div class="logo-stage" style="background:${brand.bgColor};width:150px;height:150px;">
+        <div class="logo-stage" style="background:#FFFFFF;width:150px;height:150px;">
           ${renderLogoSVG(brand.id, { variantId: activeVid })}
         </div>
 
@@ -79,15 +86,21 @@ function openBrandDetail(brand, showModal, closeModal) {
           🔊 听介绍 · ${brand.name}
         </button>
 
-        ${brand.variants.length > 1 ? `
+        ${chips.length > 1 ? `
           <div class="variant-chips">
-            ${brand.variants.map((v) => `
+            ${chips.map((v) => `
               <button class="variant-chip ${v.id === activeVid ? 'active' : ''}" data-vid="${v.id}">${v.label}</button>
             `).join('')}
           </div>
         ` : ''}
 
-        ${renderCarShowcaseHTML(brand, { showBadge: true, showCaption: true })}
+        ${showHoodTip ? `
+          <div class="hood-tip-box">
+            💡 车头上通常只展示图形图标，不带旁边英文字母哦！
+          </div>
+        ` : ''}
+
+        ${renderCarShowcaseHTML(brand, { showBadge: false, showCaption: true })}
 
         <p style="margin:0;font-size:14px;font-weight:700;color:#475569;line-height:1.5;">
           ${brand.fact}

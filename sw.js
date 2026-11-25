@@ -1,4 +1,4 @@
-const CACHE_NAME = 'car-logo-game-v4';
+const CACHE_NAME = 'car-logo-game-v5';
 const ASSETS = [
   "./",
   "./index.html",

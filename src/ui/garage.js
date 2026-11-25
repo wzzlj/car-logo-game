@@ -1,4 +1,4 @@
-// 我的车库养成与装修界面
+// 我的车库养成、装修与“小汽车喷漆变色”界面
 
 import { GARAGE_CARS, GARAGE_THEMES, GARAGE_DECORS } from '../data/garage.js';
 import { BRAND_MAP } from '../data/brands.js';
@@ -7,51 +7,112 @@ import { renderLogoSVG } from '../data/logos.js';
 import { store } from '../engine/storage.js';
 import { audio } from '../engine/audio.js';
 
+const PAINT_COLORS = [
+  { name: '烈焰红', hex: '#E63946' },
+  { name: '活力橙', hex: '#FF6B35' },
+  { name: '柠檬黄', hex: '#FFB703' },
+  { name: '薄荷绿', hex: '#2EC4B6' },
+  { name: '天空蓝', hex: '#3A86FF' },
+  { name: '闪电紫', hex: '#8338EC' },
+  { name: '甜心粉', hex: '#FF6B9D' },
+  { name: '珍珠白', hex: '#F1F5F9' },
+  { name: '酷炫黑', hex: '#2B2D42' }
+];
+
 let currentTab = 'cars';
+let viewMode = 'paint'; // 'paint' (可喷漆变色矢量车) | 'photo' (真车实拍对照)
 
 export function renderGarageScreen(root, { onBurstFX }) {
   const profile = store.getActiveProfile();
   const g = profile.garage;
+  if (!g.carColors) g.carColors = {};
+
   const activeCarBrand = BRAND_MAP[g.activeCar] || BRAND_MAP.wuling;
   const activeCarMeta = GARAGE_CARS.find((c) => c.id === g.activeCar) || GARAGE_CARS[0];
   const activeTheme = GARAGE_THEMES.find((t) => t.id === g.activeTheme) || GARAGE_THEMES[0];
   const activeDecorObjs = GARAGE_DECORS.filter((d) => g.activeDecors.includes(d.id));
+  const currentColor = g.carColors[activeCarBrand.id] || activeCarBrand.carColor;
 
   root.innerHTML = `
     <div class="garage-stage" style="background:${activeTheme.bg}">
-      <div class="garage-decor-row">
-        ${activeDecorObjs.length > 0
-          ? activeDecorObjs.map((d) => `<span title="${d.name}">${d.emoji}</span>`).join('')
-          : '<span style="opacity:0.45;font-size:14px;font-weight:800;background:rgba(255,255,255,0.7);padding:4px 10px;border-radius:999px;">买点小摆件装饰车库吧！</span>'
-        }
+      <div class="garage-top-bar">
+        <div class="garage-decor-row" style="gap:8px;">
+          ${activeDecorObjs.length > 0
+            ? activeDecorObjs.map((d) => `<span title="${d.name}">${d.emoji}</span>`).join('')
+            : '<span style="opacity:0.75;font-size:12px;font-weight:800;background:rgba(255,255,255,0.75);padding:4px 10px;border-radius:999px;">买点摆件装扮车库吧</span>'
+          }
+        </div>
+        <button id="btn-toggle-view" class="garage-view-pill">
+          ${viewMode === 'paint' ? '📸 看真车照片' : '🎨 回到喷漆车'}
+        </button>
       </div>
 
       <div id="garage-car-tap" class="garage-car-display">
-        <div class="garage-photo-frame">
-          ${renderCarSVG(activeCarBrand, { showBadge: false })}
-          <img src="${getRealCarPhotoUrl(activeCarBrand.id, 1)}" alt="${activeCarMeta.name}" class="garage-real-img" onerror="this.remove()" />
-          <div class="garage-mini-logo">${renderLogoSVG(activeCarBrand.id)}</div>
-        </div>
-        <div style="background:rgba(255,255,255,0.92);padding:5px 14px;border-radius:999px;font-size:14px;font-weight:900;margin-top:8px;box-shadow:0 3px 8px rgba(0,0,0,0.12);">
+        ${viewMode === 'paint'
+          ? `<div class="garage-paint-car">${renderCarSVG(activeCarBrand, { showBadge: true, customColor: currentColor })}</div>`
+          : `<div class="garage-photo-frame">
+               ${renderCarSVG(activeCarBrand, { showBadge: false, customColor: currentColor })}
+               <img src="${getRealCarPhotoUrl(activeCarBrand.id, 1)}" alt="${activeCarMeta.name}" class="garage-real-img" onerror="this.remove()" />
+               <div class="garage-mini-logo">${renderLogoSVG(activeCarBrand.id)}</div>
+             </div>`
+        }
+        <div style="background:rgba(255,255,255,0.92);padding:5px 14px;border-radius:999px;font-size:14px;font-weight:900;margin-top:6px;box-shadow:0 3px 8px rgba(0,0,0,0.12);">
           🔊 点一点爱车：${activeCarMeta.name}
         </div>
       </div>
     </div>
 
+    <!-- 汽车喷漆房调色盘 -->
+    <div class="paint-bar">
+      <div class="paint-bar-title">🎨 给爱车喷漆变色（免费随便换！）</div>
+      <div class="paint-swatches">
+        ${PAINT_COLORS.map((c) => `
+          <button
+            class="paint-swatch ${currentColor.toLowerCase() === c.hex.toLowerCase() ? 'active' : ''}"
+            data-color="${c.hex}"
+            data-cname="${c.name}"
+            style="background:${c.hex};"
+            title="${c.name}"
+            aria-label="${c.name}"
+          ></button>
+        `).join('')}
+      </div>
+    </div>
+
     <div class="garage-tabs">
       <button class="pill-tab ${currentTab === 'cars' ? 'active' : ''}" data-gtab="cars">🚗 爱车展厅</button>
-      <button class="pill-tab ${currentTab === 'themes' ? 'active' : ''}" data-gtab="themes">🎨 车库主题</button>
+      <button class="pill-tab ${currentTab === 'themes' ? 'active' : ''}" data-gtab="themes">🏞️ 车库主题</button>
       <button class="pill-tab ${currentTab === 'decors' ? 'active' : ''}" data-gtab="decors">🎈 趣味摆件</button>
     </div>
 
     <div id="garage-shop" class="shop-grid"></div>
   `;
 
+  root.querySelector('#btn-toggle-view').onclick = () => {
+    audio.click();
+    viewMode = viewMode === 'paint' ? 'photo' : 'paint';
+    renderGarageScreen(root, { onBurstFX });
+  };
+
   root.querySelector('#garage-car-tap').onclick = (e) => {
     audio.honk();
     audio.speak(`嘀嘀！这是我的${activeCarMeta.name}！`);
     if (onBurstFX) onBurstFX(e.clientX || window.innerWidth / 2, e.clientY || 200);
   };
+
+  root.querySelectorAll('.paint-swatch').forEach((btn) => {
+    btn.onclick = (e) => {
+      const hex = btn.dataset.color;
+      const cname = btn.dataset.cname;
+      g.carColors[activeCarBrand.id] = hex;
+      viewMode = 'paint';
+      store.save();
+      audio.paint();
+      audio.speak(`哇！你的小汽车变成${cname}啦！`);
+      if (onBurstFX) onBurstFX(e.clientX || window.innerWidth / 2, e.clientY || 240);
+      renderGarageScreen(root, { onBurstFX });
+    };
+  });
 
   root.querySelectorAll('.pill-tab').forEach((btn) => {
     btn.onclick = () => {
@@ -68,10 +129,11 @@ export function renderGarageScreen(root, { onBurstFX }) {
       const owned = g.ownedCars.includes(car.id);
       const equipped = g.activeCar === car.id;
       const brand = BRAND_MAP[car.id];
+      const savedColor = g.carColors[car.id] || brand.carColor;
       return `
         <div class="shop-card ${equipped ? 'equipped' : ''}">
           <div style="position:relative;width:100%;height:82px;overflow:hidden;border-radius:12px;">
-            ${renderCarSVG(brand, { showBadge: false })}
+            ${renderCarSVG(brand, { showBadge: false, customColor: savedColor })}
             <img src="${getRealCarPhotoUrl(brand.id, 1)}" alt="${car.name}" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.remove()" />
           </div>
           <div style="font-size:14px;font-weight:900;">${car.name}</div>
@@ -101,7 +163,7 @@ export function renderGarageScreen(root, { onBurstFX }) {
           if (onBurstFX) onBurstFX(e.clientX || window.innerWidth / 2, e.clientY || 300);
         } else {
           audio.wrong();
-          audio.speak(`车币还不够哦，再闯一关赚点车币吧！`);
+          audio.speak(`还需要多玩几局攒够车币才能买${car.name}哦！`);
         }
         renderGarageScreen(root, { onBurstFX });
       };
@@ -142,7 +204,7 @@ export function renderGarageScreen(root, { onBurstFX }) {
           if (onBurstFX) onBurstFX(e.clientX || window.innerWidth / 2, e.clientY || 300);
         } else {
           audio.wrong();
-          audio.speak('车币还差一点点，继续闯关吧！');
+          audio.speak('车币还不够哦，多玩几局攒车币吧！');
         }
         renderGarageScreen(root, { onBurstFX });
       };
@@ -184,7 +246,7 @@ export function renderGarageScreen(root, { onBurstFX }) {
           if (onBurstFX) onBurstFX(e.clientX || window.innerWidth / 2, e.clientY || 300);
         } else {
           audio.wrong();
-          audio.speak('车币不够哦，去闯关赢车币吧！');
+          audio.speak('车币不够哦，去多玩几局赢车币吧！');
         }
         renderGarageScreen(root, { onBurstFX });
       };

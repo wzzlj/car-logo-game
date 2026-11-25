@@ -27,7 +27,8 @@ export function createProfile(name = '小车手', avatar = '🚗') {
       ownedThemes: ['sunny'],
       activeTheme: 'sunny',
       ownedDecors: [],
-      activeDecors: []
+      activeDecors: [],
+      carColors: {} // 每辆车的自定义喷漆颜色 { [carId]: '#hex' }
     }
   };
 }
@@ -251,7 +252,8 @@ class Store {
           p.garage.ownedThemes,
           p.garage.activeTheme,
           p.garage.ownedDecors,
-          p.garage.activeDecors
+          p.garage.activeDecors,
+          p.garage.carColors || {}
         ]
       }))
     };
@@ -317,7 +319,8 @@ class Store {
             ownedThemes: (x.g && x.g[2]) || ['sunny'],
             activeTheme: (x.g && x.g[3]) || 'sunny',
             ownedDecors: (x.g && x.g[4]) || [],
-            activeDecors: (x.g && x.g[5]) || []
+            activeDecors: (x.g && x.g[5]) || [],
+            carColors: (x.g && x.g[6]) || {}
           }
         }))
       };
