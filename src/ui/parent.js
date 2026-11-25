@@ -170,7 +170,11 @@ function openParentPanel({ overlays, onStateChanged, onTestMealMode }) {
       </div>
       <textarea id="transfer-code" class="code-box" placeholder="导出后会显示存档码；或把另一台手机的存档码粘贴到这里再点导入..."></textarea>
       <div style="display:flex;gap:8px;margin-top:8px;">
-        <button id="btn-import" class="btn btn-success btn-sm" style="flex:1;">📥 从存档码导入恢复</button>
+        <button id="btn-import" class="btn btn-success btn-sm" style="flex:1;">📥 粘贴码导入</button>
+        <label class="btn btn-secondary btn-sm" style="flex:1;cursor:pointer;">
+          📷 识别二维码图
+          <input id="qr-file-input" type="file" accept="image/*" style="display:none;" />
+        </label>
       </div>
       <div id="transfer-msg" style="font-size:12px;font-weight:800;margin-top:6px;"></div>
     </div>
@@ -222,21 +226,30 @@ function openParentPanel({ overlays, onStateChanged, onTestMealMode }) {
     onTestMealMode();
   };
 
+  const jumpMsg = document.createElement('div');
+  jumpMsg.style.cssText = 'font-size:12px;font-weight:800;color:#1C968A;margin-top:6px;';
+  el.querySelector('#btn-jump').parentElement.parentElement.after(jumpMsg);
+
   el.querySelector('#btn-jump').onclick = () => {
     const lv = Number(el.querySelector('#sel-jump').value);
     store.jumpToLevel(lv);
     audio.correct();
-    alert(`已解锁到第 ${lv} 关！`);
+    jumpMsg.textContent = `✅ 已解锁到第 ${lv} 关！`;
     onStateChanged();
   };
 
   el.querySelector('#btn-reset').onclick = () => {
-    if (window.confirm(`确定要重置「${p.name}」的关卡与星星进度吗？（车库已买物品不受影响）`)) {
-      store.resetActiveProgress();
-      audio.click();
-      openParentPanel({ overlays, onStateChanged, onTestMealMode });
-      onStateChanged();
-    }
+    overlays.showConfirm(
+      '🗑️ 确认重置进度',
+      `确定要重置「${p.name}」的关卡与星星进度吗？（车库已买物品不受影响）`,
+      () => {
+        store.resetActiveProgress();
+        audio.click();
+        onStateChanged();
+        openParentPanel({ overlays, onStateChanged, onTestMealMode });
+      },
+      () => openParentPanel({ overlays, onStateChanged, onTestMealMode })
+    );
   };
 
   const codeBox = el.querySelector('#transfer-code');
@@ -285,4 +298,39 @@ function openParentPanel({ overlays, onStateChanged, onTestMealMode }) {
       msgEl.textContent = `❌ 导入失败：${err.message}`;
     }
   };
+
+  // 支持从二维码截图直接识别导入（使用浏览器原生 BarcodeDetector）
+  const qrInput = el.querySelector('#qr-file-input');
+  if (qrInput) {
+    qrInput.onchange = async () => {
+      const file = qrInput.files && qrInput.files[0];
+      if (!file) return;
+      if (!('BarcodeDetector' in window)) {
+        msgEl.style.color = '#D97706';
+        msgEl.textContent = 'ℹ️ 当前浏览器不支持直接识图，请用 iPhone 相机长按二维码复制文字后粘贴到上方框内导入。';
+        return;
+      }
+      try {
+        const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+        const bitmap = await createImageBitmap(file);
+        const results = await detector.detect(bitmap);
+        if (!results || results.length === 0) {
+          msgEl.style.color = '#EF476F';
+          msgEl.textContent = '❌ 未在图片中识别到二维码，请换一张清晰截图再试。';
+          return;
+        }
+        codeBox.value = results[0].rawValue;
+        store.importCode(results[0].rawValue);
+        audio.win();
+        msgEl.style.color = '#1C968A';
+        msgEl.textContent = '🎉 二维码识别并导入成功！';
+        onStateChanged();
+        setTimeout(() => openParentPanel({ overlays, onStateChanged, onTestMealMode }), 700);
+      } catch (err) {
+        audio.wrong();
+        msgEl.style.color = '#EF476F';
+        msgEl.textContent = `❌ 识别失败：${err.message}`;
+      }
+    };
+  }
 }

@@ -2,7 +2,8 @@
 
 import { GARAGE_CARS, GARAGE_THEMES, GARAGE_DECORS } from '../data/garage.js';
 import { BRAND_MAP } from '../data/brands.js';
-import { renderCarSVG } from '../data/cars.js';
+import { renderCarSVG, getRealCarPhotoUrl } from '../data/cars.js';
+import { renderLogoSVG } from '../data/logos.js';
 import { store } from '../engine/storage.js';
 import { audio } from '../engine/audio.js';
 
@@ -26,8 +27,12 @@ export function renderGarageScreen(root, { onBurstFX }) {
       </div>
 
       <div id="garage-car-tap" class="garage-car-display">
-        ${renderCarSVG(activeCarBrand, { showBadge: true })}
-        <div style="background:rgba(255,255,255,0.92);padding:5px 14px;border-radius:999px;font-size:14px;font-weight:900;margin-top:4px;box-shadow:0 3px 8px rgba(0,0,0,0.12);">
+        <div class="garage-photo-frame">
+          ${renderCarSVG(activeCarBrand, { showBadge: false })}
+          <img src="${getRealCarPhotoUrl(activeCarBrand.id, 1)}" alt="${activeCarMeta.name}" class="garage-real-img" onerror="this.remove()" />
+          <div class="garage-mini-logo">${renderLogoSVG(activeCarBrand.id)}</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.92);padding:5px 14px;border-radius:999px;font-size:14px;font-weight:900;margin-top:8px;box-shadow:0 3px 8px rgba(0,0,0,0.12);">
           🔊 点一点爱车：${activeCarMeta.name}
         </div>
       </div>
@@ -65,8 +70,9 @@ export function renderGarageScreen(root, { onBurstFX }) {
       const brand = BRAND_MAP[car.id];
       return `
         <div class="shop-card ${equipped ? 'equipped' : ''}">
-          <div style="width:100%;height:74px;overflow:hidden;border-radius:12px;">
-            ${renderCarSVG(brand, { showBadge: true })}
+          <div style="position:relative;width:100%;height:82px;overflow:hidden;border-radius:12px;">
+            ${renderCarSVG(brand, { showBadge: false })}
+            <img src="${getRealCarPhotoUrl(brand.id, 1)}" alt="${car.name}" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.remove()" />
           </div>
           <div style="font-size:14px;font-weight:900;">${car.name}</div>
           <button class="btn btn-sm ${equipped ? 'btn-success' : owned ? 'btn-secondary' : 'btn-warning'} btn-block" data-car-id="${car.id}">

@@ -1,4 +1,4 @@
-// 车标四宫格拼图玩法：点选下方碎片再点上方空位（带浅色底图提示，让幼儿园小朋友有满满成就感）
+// 车标四宫格拼图玩法：覆盖本关全部品牌；未选碎片点空位时温柔引导不判错
 
 import { BRAND_MAP } from '../data/brands.js';
 import { renderLogoSVG } from '../data/logos.js';
@@ -15,9 +15,9 @@ function shuffle(arr) {
 }
 
 export function runPuzzleMode(root, { brandIds, onAnswerTracked, onBurstFX, onComplete, onExit }) {
-  const queue = brandIds.slice(0, 3);
+  const queue = [...brandIds]; // 完整覆盖本关全部品牌，不截断
   let pIndex = 0;
-  let slots = [null, null, null, null]; // 每格放入的碎片编号 (0..3)
+  let slots = [null, null, null, null];
   let trayOrder = shuffle([0, 1, 2, 3]);
   let selectedPiece = null;
   let mistakes = 0;
@@ -30,7 +30,7 @@ export function runPuzzleMode(root, { brandIds, onAnswerTracked, onBurstFX, onCo
     }
 
     const brand = BRAND_MAP[queue[pIndex]];
-    const logoSvg = renderLogoSVG(brand.id);
+    const logoHtml = renderLogoSVG(brand.id);
     const pct = Math.round((pIndex / queue.length) * 100);
 
     root.innerHTML = `
@@ -42,7 +42,9 @@ export function runPuzzleMode(root, { brandIds, onAnswerTracked, onBurstFX, onCo
 
       <div class="prompt-card" style="padding:12px;">
         <h2 class="prompt-title" style="margin-bottom:4px;">🧩 拼出【${brand.name}】车标！</h2>
-        <div style="font-size:13px;font-weight:700;color:#5F6C7B;">先点下面一块碎片，再点上面对应的格子</div>
+        <div id="puz-hint" style="font-size:13px;font-weight:700;color:#5F6C7B;">
+          ${selectedPiece === null ? '👇 第一步：先点下面的一块小碎片' : '👆 第二步：点上面对应的空格放进去！'}
+        </div>
       </div>
 
       <div class="puzzle-board">
@@ -51,21 +53,21 @@ export function runPuzzleMode(root, { brandIds, onAnswerTracked, onBurstFX, onCo
           return `
             <div class="puzzle-slot ${placed !== null ? 'filled' : ''}" data-slot="${slotIdx}">
               ${placed !== null
-                ? `<div class="quad-clip quad-${placed}">${logoSvg}</div>`
-                : `<div class="quad-clip quad-${slotIdx}" style="opacity:0.16;filter:grayscale(1);">${logoSvg}</div>`
+                ? `<div class="quad-clip quad-${placed}">${logoHtml}</div>`
+                : `<div class="quad-clip quad-${slotIdx}" style="opacity:0.18;filter:grayscale(1);">${logoHtml}</div>`
               }
             </div>
           `;
         }).join('')}
       </div>
 
-      <div class="puzzle-tray">
+      <div id="puz-tray" class="puzzle-tray">
         ${trayOrder.map((pieceId) => {
           const isUsed = slots.includes(pieceId);
           const isSel = selectedPiece === pieceId;
           return `
             <div class="puzzle-piece ${isUsed ? 'used' : ''} ${isSel ? 'selected' : ''}" data-piece="${pieceId}">
-              <div class="quad-clip quad-${pieceId}">${logoSvg}</div>
+              <div class="quad-clip quad-${pieceId}">${logoHtml}</div>
             </div>
           `;
         }).join('')}
@@ -93,11 +95,16 @@ export function runPuzzleMode(root, { brandIds, onAnswerTracked, onBurstFX, onCo
         const slotIdx = Number(el.dataset.slot);
         if (slots[slotIdx] !== null) return;
 
-        // 如果孩子没先选碎片，自动帮他选中第一块未放碎片
+        // 修复 #5：未先选碎片时温柔引导，不判错！
         if (selectedPiece === null) {
-          const firstAvail = trayOrder.find((id) => !slots.includes(id));
-          if (firstAvail === undefined) return;
-          selectedPiece = firstAvail;
+          audio.click();
+          audio.speak('先点下面的一块小碎片哦！');
+          const tray = root.querySelector('#puz-tray');
+          if (tray) {
+            tray.style.animation = 'popGood 0.45s ease';
+            setTimeout(() => { tray.style.animation = ''; }, 480);
+          }
+          return;
         }
 
         if (selectedPiece === slotIdx) {

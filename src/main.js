@@ -117,6 +117,7 @@ function startLevel(level) {
     const common = {
       level,
       brandIds,
+      isPaused: () => !overlayRoot.classList.contains('hidden'),
       onAnswerTracked: handleAnswerTracked,
       onBurstFX: overlays.burstFX,
       onComplete,
@@ -133,8 +134,9 @@ function startLevel(level) {
   };
 
   if (level.learnFirst) {
+    // 修复 #4：学习本关全部品牌，不再截断前4个
     runLearnPhase(screenRoot, {
-      brandIds: brandIds.slice(0, 4),
+      brandIds,
       onComplete: launchPlayMode,
       onExit: exitToMap
     });

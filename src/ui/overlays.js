@@ -127,14 +127,65 @@ export function createOverlayManager(overlayRoot, fxLayer) {
     };
 
     skipBtn.onclick = () => {
-      const a = 3 + Math.floor(Math.random() * 6);
-      const b = 3 + Math.floor(Math.random() * 6);
-      const ans = window.prompt(`家长验证：${a} × ${b} = ?`);
-      if (Number(ans) === a * b) {
+      showMathVerify('🔒 家长提前结束吃饭休息', () => {
         closeModal();
         if (onResume) onResume();
+      }, () => showMealBreak(left, onResume));
+    };
+  }
+
+  // 自定义应用内家长算术验证弹窗（替代原生 window.prompt，完美兼容 iPhone PWA 全屏模式）
+  function showMathVerify(title, onPass, onCancel) {
+    const a = 3 + Math.floor(Math.random() * 6);
+    const b = 3 + Math.floor(Math.random() * 6);
+    const expected = a * b;
+    const el = showModal(`
+      <div class="modal-header">
+        <h2 class="modal-title">${title}</h2>
+        <button id="mv-close" class="icon-btn">✖️</button>
+      </div>
+      <div style="text-align:center;font-size:30px;font-weight:900;color:#FF6B35;margin:8px 0 12px;">
+        ${a} × ${b} = ?
+      </div>
+      <input id="mv-input" type="number" inputmode="numeric" placeholder="输入答案" style="width:100%;padding:12px;font-size:20px;font-weight:900;text-align:center;border-radius:16px;border:2px solid #CBD5E1;margin-bottom:10px;" />
+      <div id="mv-err" style="color:#EF476F;font-size:13px;font-weight:800;text-align:center;margin-bottom:8px;"></div>
+      <button id="mv-ok" class="btn btn-primary btn-block">确认解锁</button>
+    `, { dismissible: false });
+    const inp = el.querySelector('#mv-input');
+    setTimeout(() => inp.focus(), 60);
+    el.querySelector('#mv-close').onclick = () => {
+      if (onCancel) onCancel(); else closeModal();
+    };
+    const check = () => {
+      if (Number(inp.value) === expected) {
+        audio.click();
+        onPass();
+      } else {
+        el.querySelector('#mv-err').textContent = '答案不对哦，再算一次～';
+        audio.wrong();
       }
     };
+    el.querySelector('#mv-ok').onclick = check;
+    inp.onkeydown = (e) => { if (e.key === 'Enter') check(); };
+  }
+
+  // 自定义应用内确认弹窗（替代 window.confirm / alert）
+  function showConfirm(title, message, onConfirm, onCancel) {
+    const el = showModal(`
+      <div class="modal-header">
+        <h2 class="modal-title">${title}</h2>
+        <button id="cf-close" class="icon-btn">✖️</button>
+      </div>
+      <p style="margin:0 0 16px;font-size:15px;font-weight:700;color:#475569;line-height:1.5;">${message}</p>
+      <div style="display:flex;gap:10px;">
+        <button id="cf-no" class="btn btn-soft" style="flex:1;">取消</button>
+        <button id="cf-yes" class="btn btn-danger" style="flex:1;">确定</button>
+      </div>
+    `, { dismissible: false });
+    const cancel = () => { if (onCancel) onCancel(); else closeModal(); };
+    el.querySelector('#cf-close').onclick = cancel;
+    el.querySelector('#cf-no').onclick = cancel;
+    el.querySelector('#cf-yes').onclick = () => { audio.click(); onConfirm(); };
   }
 
   // 护眼提醒 / 今日时长上限
@@ -167,13 +218,10 @@ export function createOverlayManager(overlayRoot, fxLayer) {
     const unlockBtn = el.querySelector('#eye-unlock');
     if (unlockBtn) {
       unlockBtn.onclick = () => {
-        const a = 4 + Math.floor(Math.random() * 6);
-        const b = 4 + Math.floor(Math.random() * 6);
-        const ans = window.prompt(`家长解锁：${a} × ${b} = ?`);
-        if (Number(ans) === a * b) {
+        showMathVerify('🔒 家长解锁延长15分钟', () => {
           store.updateSettings({ dailyLimitMinutes: store.state.settings.dailyLimitMinutes + 15 });
           closeModal();
-        }
+        }, () => showEyeRest({ isDailyLimit: true }));
       };
     }
   }
@@ -227,6 +275,8 @@ export function createOverlayManager(overlayRoot, fxLayer) {
     showVictory,
     showMealBreak,
     showEyeRest,
-    showProfileSwitcher
+    showProfileSwitcher,
+    showMathVerify,
+    showConfirm
   };
 }

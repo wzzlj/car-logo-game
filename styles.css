@@ -874,8 +874,59 @@ input, textarea, select {
   transition: transform 0.2s ease;
 }
 
-.garage-car-display:active svg {
-  transform: scale(1.06) translateY(-4px);
+.garage-car-display:active svg,
+.garage-car-display:active .garage-photo-frame {
+  transform: scale(1.04) translateY(-3px);
+}
+
+.garage-photo-frame {
+  position: relative;
+  width: 248px;
+  height: 138px;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 4px solid #FFFFFF;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22);
+  background: #F1F5F9;
+  transition: transform 0.2s ease;
+}
+
+.garage-photo-frame svg {
+  width: 100%;
+  height: 100%;
+  filter: none;
+}
+
+.garage-real-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.garage-mini-logo {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.94);
+  padding: 5px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.16);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pulse-speak {
+  animation: gentlePulse 2.2s ease-in-out infinite;
+}
+
+@keyframes gentlePulse {
+  0%, 100% { box-shadow: 0 5px 0 #1F62D6, 0 0 0 0 rgba(58, 134, 255, 0.38); }
+  50% { box-shadow: 0 5px 0 #1F62D6, 0 0 0 10px rgba(58, 134, 255, 0); }
 }
 
 .garage-tabs {

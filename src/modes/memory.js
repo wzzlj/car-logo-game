@@ -1,4 +1,4 @@
-// 车标翻牌配对玩法：幼儿园友好 3×2 / 3×4 卡片配对
+// 车标翻牌配对玩法：完整覆盖本关全部品牌（超过4个品牌自动分成2轮，每轮3~4对，保证大卡片易点按）
 
 import { BRAND_MAP } from '../data/brands.js';
 import { renderLogoSVG } from '../data/logos.js';
@@ -15,34 +15,58 @@ function shuffle(arr) {
 }
 
 export function runMemoryMode(root, { brandIds, onAnswerTracked, onBurstFX, onComplete, onExit }) {
-  const chosen = brandIds.slice(0, 3); // 3 对 = 6 张超大卡片，非常适合幼儿园小朋友
-  const cards = shuffle(
-    chosen.flatMap((id) => [
-      { uid: id + '_a', brandId: id, matched: false },
-      { uid: id + '_b', brandId: id, matched: false }
-    ])
-  );
+  // 如果超过 4 个品牌（如 6 个），拆成 2 轮（每轮 3 对 = 6 张卡），既不漏品牌又保持超大按钮
+  const rounds = [];
+  if (brandIds.length <= 4) {
+    rounds.push([...brandIds]);
+  } else {
+    const mid = Math.ceil(brandIds.length / 2);
+    rounds.push(brandIds.slice(0, mid));
+    rounds.push(brandIds.slice(mid));
+  }
 
+  let roundIdx = 0;
+  let totalMoves = 0;
+  let totalPairs = brandIds.length;
+  let totalMatched = 0;
+  let cards = [];
   let flipped = [];
-  let matchedPairs = 0;
+  let matchedInRound = 0;
   let busy = false;
-  let moves = 0;
+
+  function initRound() {
+    const chosen = rounds[roundIdx];
+    cards = shuffle(
+      chosen.flatMap((id) => [
+        { uid: id + '_a', brandId: id, matched: false },
+        { uid: id + '_b', brandId: id, matched: false }
+      ])
+    );
+    flipped = [];
+    matchedInRound = 0;
+    busy = false;
+  }
 
   function render() {
-    const pct = Math.round((matchedPairs / chosen.length) * 100);
+    const chosen = rounds[roundIdx];
+    const pct = Math.round((totalMatched / Math.max(1, totalPairs)) * 100);
+    const cols = cards.length === 8 ? 4 : 3;
+
     root.innerHTML = `
       <div class="play-header">
         <button id="mem-exit" class="icon-btn">⬅️</button>
         <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
-        <span class="stat-chip" style="font-size:13px;padding:4px 10px;">🃏 ${matchedPairs}/${chosen.length}</span>
+        <span class="stat-chip" style="font-size:13px;padding:4px 10px;">
+          🃏 ${rounds.length > 1 ? `第${roundIdx + 1}/${rounds.length}轮 · ` : ''}${matchedInRound}/${chosen.length}
+        </span>
       </div>
 
-      <div class="prompt-card">
-        <h2 class="prompt-title">🃏 翻开卡片，找到一样的车标吧！</h2>
-        <button id="mem-speak" class="speak-big-btn btn-sm" style="padding:8px 16px;font-size:15px;">🔊 听规则</button>
+      <div class="prompt-card" style="padding:12px;">
+        <h2 class="prompt-title" style="margin-bottom:6px;">🃏 翻开卡片，找到一样的车标吧！</h2>
+        <button id="mem-speak" class="speak-big-btn btn-sm pulse-speak" style="padding:8px 16px;font-size:15px;">🔊 听规则</button>
       </div>
 
-      <div class="memory-grid">
+      <div class="memory-grid" style="grid-template-columns:repeat(${cols}, 1fr);">
         ${cards.map((c, idx) => {
           const isOpen = c.matched || flipped.includes(idx);
           return `
@@ -74,7 +98,13 @@ export function runMemoryMode(root, { brandIds, onAnswerTracked, onBurstFX, onCo
         if (busy) return;
         const idx = Number(el.dataset.idx);
         const card = cards[idx];
-        if (card.matched || flipped.includes(idx)) return;
+        // 点已配对的卡片可重复听品牌名
+        if (card.matched) {
+          audio.click();
+          audio.speak(BRAND_MAP[card.brandId]?.name || '');
+          return;
+        }
+        if (flipped.includes(idx)) return;
 
         audio.flip();
         flipped.push(idx);
@@ -82,7 +112,7 @@ export function runMemoryMode(root, { brandIds, onAnswerTracked, onBurstFX, onCo
 
         if (flipped.length === 2) {
           busy = true;
-          moves += 1;
+          totalMoves += 1;
           const [i1, i2] = flipped;
           const c1 = cards[i1];
           const c2 = cards[i2];
@@ -90,7 +120,8 @@ export function runMemoryMode(root, { brandIds, onAnswerTracked, onBurstFX, onCo
           if (c1.brandId === c2.brandId) {
             c1.matched = true;
             c2.matched = true;
-            matchedPairs += 1;
+            matchedInRound += 1;
+            totalMatched += 1;
             const brand = BRAND_MAP[c1.brandId];
             store.recordAnswer(c1.brandId, true);
             audio.correct();
@@ -101,9 +132,16 @@ export function runMemoryMode(root, { brandIds, onAnswerTracked, onBurstFX, onCo
               flipped = [];
               busy = false;
               const nextStep = () => {
-                if (matchedPairs >= chosen.length) {
-                  const stars = moves <= chosen.length + 2 ? 3 : moves <= chosen.length + 4 ? 2 : 1;
-                  onComplete({ stars, correctCount: chosen.length, total: chosen.length });
+                if (matchedInRound >= chosen.length) {
+                  if (roundIdx < rounds.length - 1) {
+                    roundIdx += 1;
+                    initRound();
+                    render();
+                    audio.speak('太棒啦，进入下一轮翻牌挑战！');
+                  } else {
+                    const stars = totalMoves <= totalPairs + 3 ? 3 : totalMoves <= totalPairs + 6 ? 2 : 1;
+                    onComplete({ stars, correctCount: totalPairs, total: totalPairs });
+                  }
                 } else {
                   render();
                 }
@@ -125,6 +163,7 @@ export function runMemoryMode(root, { brandIds, onAnswerTracked, onBurstFX, onCo
     });
   }
 
+  initRound();
   audio.speak('翻牌记忆大挑战！找出两个一模一样的车标吧！');
   render();
 }

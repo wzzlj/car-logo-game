@@ -1,4 +1,4 @@
-// 自动生成的 50 个品牌真实车标资源清单（来源：Wikimedia Commons / Wikipedia）
+// 自动生成的 50 个品牌真实车标 + 经典旧标资源清单（来源：Wikimedia Commons / Wikipedia）
 export const REAL_LOGO_MAP = {
   "byd": "./assets/logos/byd.svg",
   "yangwang": "./assets/logos/yangwang.svg",
@@ -50,4 +50,9 @@ export const REAL_LOGO_MAP = {
   "landrover": "./assets/logos/landrover.svg",
   "volvo": "./assets/logos/volvo.svg",
   "ferrari": "./assets/logos/ferrari.svg"
+};
+
+export const REAL_CLASSIC_LOGO_MAP = {
+  "geely": "./assets/logos/geely_classic.svg",
+  "buick": "./assets/logos/buick_classic.svg"
 };
