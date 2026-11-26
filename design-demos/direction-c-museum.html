@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>方向 C · 小小汽车博物馆（Auto Museum）— 小小车标大冒险</title>
+  <style>
+    :root {
+      --plaster: #F4F3EF;
+      --card: #FFFFFF;
+      --ink: #18181B;
+      --muted: #71717A;
+      --accent: #1D4ED8;
+      --accent-soft: #EFF6FF;
+      --line: rgba(24, 24, 27, 0.09);
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      margin: 0; padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+      background: #E9E7E0;
+      color: var(--ink);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .board {
+      min-height: 100vh;
+      padding: 40px 28px 64px;
+    }
+
+    .board-head {
+      max-width: 1340px;
+      margin: 0 auto 38px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 24px;
+      border-bottom: 1px solid rgba(24, 24, 27, 0.12);
+      padding-bottom: 22px;
+    }
+
+    .board-kicker {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .board-title { margin: 0; font-size: 36px; font-weight: 800; letter-spacing: -0.03em; }
+    .board-sub { margin: 10px 0 0; color: #52525B; font-size: 15px; max-width: 640px; line-height: 1.6; }
+
+    .board-nav { display: flex; gap: 10px; flex-wrap: wrap; }
+    .board-link {
+      color: var(--ink);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 9px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(24, 24, 27, 0.14);
+      background: rgba(255, 255, 255, 0.65);
+    }
+    .board-link.active { background: var(--ink); border-color: var(--ink); color: #fff; }
+
+    /* Flow Showboard with hairline connectors */
+    .flow-row {
+      max-width: 1340px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 356px 40px 356px 40px 356px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .flow-arrow {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      color: #71717A;
+      font-size: 10px;
+      font-family: ui-monospace, monospace;
+    }
+
+    .phone-col { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .phone-label {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 700;
+      color: #52525B;
+      padding: 0 8px;
+    }
+
+    .iphone {
+      width: 100%;
+      height: 748px;
+      border-radius: 48px;
+      padding: 10px;
+      background: #1C1C1E;
+      box-shadow: 0 24px 54px rgba(24, 24, 27, 0.16);
+    }
+
+    .iphone-screen {
+      width: 100%;
+      height: 100%;
+      border-radius: 38px;
+      background: var(--plaster);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .m-top {
+      padding: 46px 20px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .m-brand { font-size: 13px; font-weight: 800; letter-spacing: -0.01em; }
+    .m-stat {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      background: #fff;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+    }
+
+    .m-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px 18px 88px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Editorial Big Number */
+    .museum-hero {
+      padding: 6px 2px 2px;
+    }
+    .museum-num {
+      font-size: 46px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+    .museum-num span { font-size: 18px; color: var(--muted); font-weight: 600; }
+    .museum-cap { font-size: 13px; color: var(--muted); margin-top: 6px; font-weight: 500; }
+
+    /* Gallery Specimen Card */
+    .specimen-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 26px;
+      padding: 18px;
+      box-shadow: 0 8px 24px rgba(24, 24, 27, 0.04);
+    }
+    .specimen-meta {
+      display: flex;
+      justify-content: space-between;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    .trio-wall {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .wall-item {
+      background: var(--plaster);
+      border-radius: 18px;
+      padding: 12px 6px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .wall-item:hover { border-color: rgba(29, 78, 216, 0.25); background: #fff; }
+    .wall-item img { width: 52px; height: 52px; object-fit: contain; }
+    .wall-item span { font-size: 12px; font-weight: 700; }
+
+    .m-primary-btn {
+      width: 100%;
+      border: none;
+      border-radius: 16px;
+      padding: 15px 18px;
+      background: var(--accent);
+      color: #FFFFFF;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: opacity 0.15s;
+    }
+    .m-primary-btn:active { opacity: 0.88; }
+
+    /* Clean List Modes */
+    .mode-list {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      overflow: hidden;
+    }
+    .mode-row {
+      width: 100%;
+      border: none;
+      background: transparent;
+      padding: 13px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+      cursor: pointer;
+      text-align: left;
+    }
+    .mode-row:last-child { border-bottom: none; }
+    .mode-row strong { display: block; font-size: 14px; font-weight: 700; color: var(--ink); }
+    .mode-row small { font-size: 12px; color: var(--muted); }
+
+    /* Floating Glass Pill Nav */
+    .glass-pill-nav {
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 4px;
+      padding: 5px;
+      background: rgba(255, 255, 255, 0.86);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(24, 24, 27, 0.1);
+      border-radius: 999px;
+      box-shadow: 0 10px 28px rgba(24, 24, 27, 0.12);
+    }
+    .gp-btn {
+      border: none;
+      background: transparent;
+      padding: 9px 18px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .gp-btn.active { background: var(--ink); color: #fff; }
+
+    .spec-strip {
+      max-width: 1340px;
+      margin: 34px auto 0;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+    .spec-card {
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 16px;
+    }
+    .spec-card h4 { margin: 0 0 6px; font-size: 13px; color: var(--accent); }
+    .spec-card p { margin: 0; font-size: 13px; color: #52525B; line-height: 1.55; }
+
+    .toast {
+      position: absolute;
+      bottom: 78px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--ink);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 8px 14px;
+      border-radius: 999px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+      white-space: nowrap;
+      z-index: 30;
+    }
+    .toast.show { opacity: 1; }
+
+    @media (max-width: 1180px) {
+      .flow-row { grid-template-columns: 356px; }
+      .flow-arrow, .phone-col:not(:first-child), .spec-strip { display: none; }
+      .board { padding: 16px 12px 32px; }
+      .board-head { flex-direction: column; align-items: flex-start; margin-bottom: 18px; }
+      .board-title { font-size: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="board">
+    <header class="board-head">
+      <div>
+        <div class="board-kicker">Direction C · Auto Museum</div>
+        <h1 class="board-title">小小汽车博物馆 · 画廊级内容主角</h1>
+        <p class="board-sub">
+          界面彻底退居幕后，把 100% 视觉焦点交给真实车标与高清真车实拍。石膏浅灰展馆底、编号收藏卡排版、单一赛道蓝行动色、底部悬浮玻璃胶囊导航，最护眼、零视觉干扰。
+        </p>
+      </div>
+      <nav class="board-nav">
+        <a class="board-link" href="./index.html">总览对比</a>
+        <a class="board-link" href="./direction-a-cockpit.html">方向 A · 驾驶舱</a>
+        <a class="board-link" href="./direction-b-toybox.html">方向 B · 绘本小镇</a>
+        <a class="board-link active" href="./direction-c-museum.html">方向 C · 汽车博物馆</a>
+      </nav>
+    </header>
+
+    <main class="flow-row">
+      <!-- Screen 1: Home Gallery -->
+      <section class="phone-col">
+        <div class="phone-label"><span>01 · 展馆首页（可点交互）</span><span>HOME</span></div>
+        <div class="iphone">
+          <div class="iphone-screen">
+            <div class="m-top">
+              <span class="m-brand">小车手 · 展馆</span>
+              <span class="m-stat">★ 36 · 185 币</span>
+            </div>
+
+            <div class="m-body">
+              <div class="museum-hero">
+                <div class="museum-num">18 <span>/ 50</span></div>
+                <div class="museum-cap">已收录真实车标 · 国产与国际同步探索</div>
+              </div>
+
+              <div class="specimen-card">
+                <div class="specimen-meta">
+                  <span>NEXT EXHIBITS · 03</span>
+                  <span>MIXED</span>
+                </div>
+                <div class="trio-wall">
+                  <button class="wall-item" onclick="cToast('🔊 比亚迪 · 中国新能源')">
+                    <img src="../assets/logos/byd.svg" alt="比亚迪" />
+                    <span>比亚迪</span>
+                  </button>
+                  <button class="wall-item" onclick="cToast('🔊 特斯拉 · 电动跑车')">
+                    <img src="../assets/logos/tesla.svg" alt="特斯拉" />
+                    <span>特斯拉</span>
+                  </button>
+                  <button class="wall-item" onclick="cToast('🔊 保时捷 · 盾牌超跑')">
+                    <img src="../assets/logos/porsche.png" alt="保时捷" />
+                    <span>保时捷</span>
+                  </button>
+                </div>
+                <button class="m-primary-btn" onclick="cToast('开始认识这 3 个车标，再混合挑战！')">
+                  开始探索 · 先学再混玩
+                </button>
+              </div>
+
+              <div class="mode-list">
+                <button class="mode-row" onclick="cToast('进入：真车放大猜')">
+                  <div><strong>真车放大猜</strong><small>2.25× 局部放大寻找车头标</small></div>
+                  <span style="color:var(--accent);font-weight:700;">›</span>
+                </button>
+                <button class="mode-row" onclick="cToast('进入：听音混搭猜')">
+                  <div><strong>听音混搭猜</strong><small>已学车标全随机听音辨认</small></div>
+                  <span style="color:var(--muted);">›</span>
+                </button>
+                <button class="mode-row" onclick="cToast('进入：翻牌记忆与拼图')">
+                  <div><strong>翻牌记忆 · 四块拼图</strong><small>图形观察力训练</small></div>
+                  <span style="color:var(--muted);">›</span>
+                </button>
+                <button class="mode-row" onclick="cToast('进入：错题巩固')">
+                  <div><strong>错题小复习</strong><small>2 个易混淆车标待巩固</small></div>
+                  <span style="color:var(--muted);">›</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="toast" id="c-toast"></div>
+
+            <nav class="glass-pill-nav">
+              <button class="gp-btn active">展馆</button>
+              <button class="gp-btn" onclick="cToast('进入：车库')">车库</button>
+              <button class="gp-btn" onclick="cToast('进入：图鉴')">图鉴</button>
+            </nav>
+          </div>
+        </div>
+      </section>
+
+      <div class="flow-arrow"><span>→</span><span>学标</span></div>
+
+      <!-- Screen 2: Collector Card -->
+      <section class="phone-col">
+        <div class="phone-label"><span>02 · 实体收藏认知卡</span><span>LEARN</span></div>
+        <div class="iphone">
+          <div class="iphone-screen">
+            <div class="m-top">
+              <span class="m-brand">← 返回</span>
+              <span class="m-stat">NO. 04 / 50</span>
+            </div>
+            <div class="m-body" style="padding-bottom:24px;">
+              <div class="specimen-card" style="text-align:center;">
+                <div class="specimen-meta"><span>ITALY · SPORTS</span><span>FERRARI</span></div>
+                <div style="width:136px;height:136px;margin:0 auto 14px;background:var(--plaster);border-radius:22px;display:grid;place-items:center;padding:18px;">
+                  <img src="../assets/logos/ferrari.svg" alt="法拉利" style="width:100%;height:100%;object-fit:contain;" />
+                </div>
+                <div style="font-size:28px;font-weight:800;letter-spacing:-0.02em;">法拉利</div>
+                <div style="font-size:13px;color:var(--muted);margin:6px 0 14px;line-height:1.5;">
+                  黄色盾牌里有一匹黑色跃马，代表速度极快的超级跑车。
+                </div>
+                <img src="../assets/cars/ferrari_1.jpg" alt="法拉利真车" style="width:100%;height:152px;object-fit:cover;border-radius:16px;margin-bottom:14px;" />
+                <button class="m-primary-btn">听声音 · 认识下一个</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="flow-arrow"><span>→</span><span>混玩</span></div>
+
+      <!-- Screen 3: Clean Photo Quiz -->
+      <section class="phone-col">
+        <div class="phone-label"><span>03 · 无干扰真车猜标</span><span>QUIZ</span></div>
+        <div class="iphone">
+          <div class="iphone-screen">
+            <div class="m-top">
+              <span class="m-brand">真车辨认</span>
+              <span class="m-stat">3 / 8</span>
+            </div>
+            <div class="m-body" style="padding-bottom:24px;">
+              <div class="specimen-card" style="padding:12px;">
+                <img src="../assets/cars/porsche_1.jpg" alt="保时捷实拍" style="width:100%;height:192px;object-fit:cover;border-radius:16px;display:block;margin-bottom:10px;" />
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:0 4px;">
+                  <span style="font-size:13px;font-weight:700;">这是哪个品牌的车？</span>
+                  <span style="font-size:12px;color:var(--accent);font-weight:700;">放大看车标</span>
+                </div>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div class="specimen-card" style="padding:16px;height:112px;display:grid;place-items:center;"><img src="../assets/logos/porsche.png" alt="保时捷" style="width:68px;height:68px;object-fit:contain;" /></div>
+                <div class="specimen-card" style="padding:16px;height:112px;display:grid;place-items:center;"><img src="../assets/logos/ferrari.svg" alt="法拉利" style="width:68px;height:68px;object-fit:contain;" /></div>
+                <div class="specimen-card" style="padding:16px;height:112px;display:grid;place-items:center;"><img src="../assets/logos/xiaomi.svg" alt="小米" style="width:68px;height:68px;object-fit:contain;" /></div>
+                <div class="specimen-card" style="padding:16px;height:112px;display:grid;place-items:center;"><img src="../assets/logos/byd.svg" alt="比亚迪" style="width:68px;height:68px;object-fit:contain;" /></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <section class="spec-strip">
+      <div class="spec-card">
+        <h4>主屏形态</h4>
+        <p>画廊策展页：超大收录数 18/50 + 本轮 3 枚展品卡 + 轻盈列表。</p>
+      </div>
+      <div class="spec-card">
+        <h4>签名物件</h4>
+        <p>带展品编号（NO.04/50）的汽车实体收藏卡 + 底部悬浮玻璃胶囊导航。</p>
+      </div>
+      <div class="spec-card">
+        <h4>颜色回答什么</h4>
+        <p>全站只有 1 个赛道蓝代表“点击行动”，所有色彩让位给车标和实拍真车。</p>
+      </div>
+      <div class="spec-card">
+        <h4>适合人群</h4>
+        <p>视觉最干净护眼、零干扰，像 Apple Design Award 级别的科普启蒙应用。</p>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    let t = null;
+    function cToast(msg) {
+      const el = document.getElementById('c-toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(t);
+      t = setTimeout(() => el.classList.remove('show'), 1800);
+    }
+  </script>
+</body>
+</html>
