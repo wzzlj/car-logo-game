@@ -1,28 +1,24 @@
-// 50个品牌的混合学习推荐顺序（国产与国际明星品牌穿插交替，一开始就能认识宝马、法拉利、奔驰、特斯拉、比亚迪、小米等！）
+// 88 个汽车品牌的混合学习推荐顺序（国产 43 个 + 国际 45 个全程穿插交替，从第 1 轮就能认识比亚迪、宝马、兰博基尼、小米、法拉利、奔驰等明星品牌！）
 
 export const MIXED_LEARNING_ORDER = [
-  // 第1组：最受小朋友喜爱的明星车（国产+国际混合）
-  'byd', 'bmw', 'xiaomi', 'ferrari',
-  // 第2组
-  'mercedes', 'hongqi', 'tesla', 'wuling',
-  // 第3组
-  'audi', 'nio', 'porsche', 'vw',
-  // 第4组
-  'toyota', 'lixiang', 'geely', 'honda',
-  // 第5组
-  'xpeng', 'ford', 'tank', 'landrover',
-  // 第6组
-  'aito', 'nissan', 'zeekr', 'buick',
-  // 第7组
-  'yangwang', 'mazda', 'lynkco', 'hyundai',
-  // 第8组
-  'haval', 'lexus', 'changan', 'volvo',
-  // 第9组
-  'chery', 'cadillac', 'denza', 'fangchengbao',
-  // 第10组
-  'deepal', 'avatr', 'gwm', 'wey',
-  // 第11组
-  'ora', 'exeed', 'jetour', 'roewe',
-  // 第12组
-  'mg', 'im', 'baojun', 'gac', 'aion', 'leapmotor'
+  // 第 1 梯队：小朋友最爱 & 路上最常见明星车
+  'byd', 'bmw', 'lamborghini', 'xiaomi', 'ferrari', 'mercedes',
+  'hongqi', 'tesla', 'wuling', 'porsche', 'audi', 'nio',
+  'maserati', 'toyota', 'lixiang', 'geely', 'honda', 'rollsroyce',
+  // 第 2 梯队：经典家用 + 酷炫超跑穿插
+  'vw', 'xpeng', 'chevrolet', 'tank', 'bentley', 'ford',
+  'landrover', 'aito', 'peugeot', 'nissan', 'zeekr', 'mclaren',
+  'buick', 'yangwang', 'jeep', 'mazda', 'lynkco', 'bugatti',
+  // 第 3 梯队：常见街车 + 个性动物/图形标
+  'hyundai', 'haval', 'mitsubishi', 'changan', 'subaru', 'volvo',
+  'chery', 'lexus', 'citroen', 'cadillac', 'denza', 'mini',
+  'fangchengbao', 'jaguar', 'deepal', 'smart', 'avatr', 'astonmartin',
+  // 第 4 梯队：新能源新势力 + 欧洲/日系经典 + 幼儿园天天见的大巴/卡车标
+  'yutong', 'kia', 'gwm', 'suzuki', 'wey', 'skoda',
+  'ora', 'renault', 'voyah', 'lincoln', 'dongfeng', 'infiniti',
+  'arcfox', 'acura', 'faw', 'alfaromeo', 'baic', 'fiat',
+  // 第 5 梯队：进阶收藏车标
+  'exeed', 'lotus', 'jetour', 'polestar', 'roewe', 'kinglong',
+  'mg', 'im', 'baojun', 'gac', 'aion', 'leapmotor',
+  'jac', 'neta', 'maxus', 'foton'
 ];

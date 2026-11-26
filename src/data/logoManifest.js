@@ -1,4 +1,4 @@
-// 50 个品牌真实车标清单（含纯车头徽标、经典旧标与带字母完整标）
+// 88 个品牌真实车标清单（自动校验生成）
 export const REAL_LOGO_MAP = {
   "byd": "./assets/logos/byd.svg",
   "yangwang": "./assets/logos/yangwang.svg",
@@ -49,7 +49,45 @@ export const REAL_LOGO_MAP = {
   "lexus": "./assets/logos/lexus.svg",
   "landrover": "./assets/logos/landrover.svg",
   "volvo": "./assets/logos/volvo.svg",
-  "ferrari": "./assets/logos/ferrari.svg"
+  "ferrari": "./assets/logos/ferrari.svg",
+  "voyah": "./assets/logos/voyah.png",
+  "dongfeng": "./assets/logos/dongfeng.svg",
+  "faw": "./assets/logos/faw.png",
+  "baic": "./assets/logos/baic.png",
+  "arcfox": "./assets/logos/arcfox.svg",
+  "jac": "./assets/logos/jac.png",
+  "neta": "./assets/logos/neta.png",
+  "maxus": "./assets/logos/maxus.png",
+  "foton": "./assets/logos/foton.svg",
+  "yutong": "./assets/logos/yutong.png",
+  "kinglong": "./assets/logos/kinglong.png",
+  "lamborghini": "./assets/logos/lamborghini.svg",
+  "maserati": "./assets/logos/maserati.svg",
+  "rollsroyce": "./assets/logos/rollsroyce.svg",
+  "bentley": "./assets/logos/bentley.svg",
+  "astonmartin": "./assets/logos/astonmartin.svg",
+  "mclaren": "./assets/logos/mclaren.svg",
+  "bugatti": "./assets/logos/bugatti.svg",
+  "jaguar": "./assets/logos/jaguar.svg",
+  "mini": "./assets/logos/mini.svg",
+  "smart": "./assets/logos/smart.svg",
+  "jeep": "./assets/logos/jeep.svg",
+  "chevrolet": "./assets/logos/chevrolet.svg",
+  "lincoln": "./assets/logos/lincoln.svg",
+  "kia": "./assets/logos/kia.svg",
+  "peugeot": "./assets/logos/peugeot.svg",
+  "citroen": "./assets/logos/citroen.svg",
+  "renault": "./assets/logos/renault.svg",
+  "skoda": "./assets/logos/skoda.png",
+  "subaru": "./assets/logos/subaru.png",
+  "mitsubishi": "./assets/logos/mitsubishi.svg",
+  "suzuki": "./assets/logos/suzuki.svg",
+  "infiniti": "./assets/logos/infiniti.svg",
+  "acura": "./assets/logos/acura.svg",
+  "alfaromeo": "./assets/logos/alfaromeo.png",
+  "fiat": "./assets/logos/fiat.svg",
+  "lotus": "./assets/logos/lotus.svg",
+  "polestar": "./assets/logos/polestar.svg"
 };
 
 export const REAL_CLASSIC_LOGO_MAP = {

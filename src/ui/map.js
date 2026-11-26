@@ -1,10 +1,11 @@
-// 点开即玩的首页主界面：去掉冗长关卡锁，主打“先学3个新标 + 混合以前学过的一起玩”核心循环 + 多种随时畅玩小游戏
+// Direction A (Mini Cockpit) 驾驶舱首页：里程刻度进度 + 10格能量灯换金钥匙 + 深炭展台3标预览 + 实体 ENGINE START 启动键
 
 import { BRANDS, BRAND_MAP } from '../data/brands.js';
 import { MIXED_LEARNING_ORDER } from '../data/levels.js';
 import { renderLogoSVG } from '../data/logos.js';
-import { store } from '../engine/storage.js';
+import { store, ENERGY_PER_KEY } from '../engine/storage.js';
 import { audio } from '../engine/audio.js';
+import { ICONS } from './icons.js';
 
 export function getNextBatchToLearn(scope = 'all', count = 3) {
   const learnedSet = new Set(store.getLearnedBrandIds());
@@ -14,7 +15,7 @@ export function getNextBatchToLearn(scope = 'all', count = 3) {
   });
   const unlearned = ordered.filter((id) => !learnedSet.has(id));
   if (unlearned.length >= count) return unlearned.slice(0, count);
-  // 全部都学过以后，优先挑选掌握度最低的 3 个复习
+
   const profile = store.getActiveProfile();
   const byWeakness = [...ordered].sort((a, b) => {
     const sa = profile.brandStats[a] || { r: 0, w: 0 };
@@ -31,7 +32,8 @@ export function renderMapScreen(root, {
 }) {
   const profile = store.getActiveProfile();
   const scope = store.state.settings.scope;
-  const totalCount = scope === 'cn' ? 32 : 50;
+  const scopedBrands = BRANDS.filter((b) => (scope === 'cn' ? b.origin === 'cn' : true));
+  const totalCount = scopedBrands.length;
   const learnedIds = store.getLearnedBrandIds().filter((id) => {
     const b = BRAND_MAP[id];
     return b && (scope === 'cn' ? b.origin === 'cn' : true);
@@ -41,58 +43,69 @@ export function renderMapScreen(root, {
     const b = BRAND_MAP[id];
     return b && (scope === 'cn' ? b.origin === 'cn' : true);
   });
-  const pct = Math.min(100, Math.round((learnedIds.length / totalCount) * 100));
+
+  const litTicks = Math.round((learnedIds.length / Math.max(1, totalCount)) * 22);
+  const energy = profile.energy || 0;
+  const remainEnergy = ENERGY_PER_KEY - energy;
 
   root.innerHTML = `
-    <div class="hero-banner">
-      <div style="flex:1;">
-        <h1>小小车标大冒险</h1>
-        <p>已认识 ${learnedIds.length} / ${totalCount} 个车标 · 边玩边攒车币买豪车！</p>
-        <div class="progress-track" style="height:12px;margin-top:8px;background:rgba(255,255,255,0.35);border:none;">
-          <div class="progress-fill" style="width:${pct}%;background:#FFFFFF;"></div>
+    <section class="instrument-deck">
+      <div class="deck-head">
+        <span class="deck-kicker">车标里程表 · ${scope === 'cn' ? '中国国产精选' : '国产+国际混搭'}</span>
+        <div class="odometer">${learnedIds.length} <span>/ ${totalCount}</span></div>
+      </div>
+
+      <div class="gauge-ticks" aria-hidden="true">
+        ${Array.from({ length: 22 }, (_, i) => `<div class="gauge-tick ${i < litTicks ? 'on' : ''}"></div>`).join('')}
+      </div>
+
+      <!-- 幼儿园直观奖励条：10格能量灯 -> 1把金钥匙 -->
+      <div class="energy-strip">
+        <div class="energy-top">
+          <span>能量满格合成 1 把金钥匙</span>
+          <strong>还差 ${remainEnergy} 格</strong>
+        </div>
+        <div class="energy-leds" aria-label="能量进度 ${energy} / ${ENERGY_PER_KEY}">
+          ${Array.from({ length: ENERGY_PER_KEY }, (_, i) => `<div class="energy-led ${i < energy ? 'lit' : ''}"></div>`).join('')}
         </div>
       </div>
-      <div class="hero-mascot">🏎️</div>
-    </div>
 
-    <!-- 核心大按钮：点开就学 3 个新标（国产+国际混合）并混合之前学过的一起识别 -->
-    <div class="play-hero-card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-        <span style="font-size:15px;font-weight:900;color:#FF6B35;">
-          ✨ ${learnedIds.length < totalCount ? '接下来认识这 3 个新朋友：' : '全图鉴混搭复习时间：'}
-        </span>
-        <span style="font-size:12px;font-weight:800;color:#64748B;">国产+国际混合</span>
+      <div class="tray-head">
+        <span>${learnedIds.length < totalCount ? '本轮发车 · 认识 3 个新朋友' : '全图鉴混搭复习时间'}</span>
+        <span style="color:#FF8C66;">点徽标听名字</span>
       </div>
 
       <div class="preview-logo-row">
         ${nextBatch.map((id) => `
-          <div class="preview-logo-chip">
+          <button class="preview-logo-chip" data-preview-id="${id}">
             <div class="preview-logo-box">${renderLogoSVG(id)}</div>
             <span>${BRAND_MAP[id].name}</span>
-          </div>
+          </button>
         `).join('')}
       </div>
 
-      <button id="btn-instant-play" class="btn btn-primary btn-block play-hero-btn">
-        ▶️ 点开就玩！（先学再混玩）
+      <button id="btn-instant-play" class="engine-start-btn">
+        <span>启动出发 · 先学再混玩</span>
+        <span class="start-ring">${ICONS.power(17)}</span>
       </button>
+    </section>
+
+    <div class="section-label">
+      <span>自由挑战控制台</span>
+      <span>6 种模式</span>
     </div>
 
-    <div style="font-size:15px;font-weight:900;color:#232946;margin:16px 2px 10px;">
-      🎮 趣味自由玩（用学过的车标随时挑战）
-    </div>
-
-    <div class="quick-actions" style="gap:12px;">
-      <button id="mode-car" class="quick-card">
-        <span class="q-emoji">🚘</span>
+    <div class="quick-actions">
+      <button id="mode-car" class="quick-card accent">
+        <span class="q-icon">${ICONS.search(19)}</span>
         <div>
           <div class="q-title">真车放大猜</div>
-          <div class="q-sub">放大镜看真车标</div>
+          <div class="q-sub">瞄准车头找车标</div>
         </div>
       </button>
 
       <button id="mode-mixed" class="quick-card">
-        <span class="q-emoji">🔊</span>
+        <span class="q-icon">${ICONS.speaker(19)}</span>
         <div>
           <div class="q-title">听音混搭猜</div>
           <div class="q-sub">学过的全混一起</div>
@@ -100,64 +113,57 @@ export function renderMapScreen(root, {
       </button>
 
       <button id="mode-memory" class="quick-card">
-        <span class="q-emoji">🃏</span>
+        <span class="q-icon">${ICONS.cards(19)}</span>
         <div>
           <div class="q-title">翻牌记忆乐</div>
-          <div class="q-sub">找一样的车标</div>
+          <div class="q-sub">配对相同车标</div>
         </div>
       </button>
 
       <button id="mode-puzzle" class="quick-card">
-        <span class="q-emoji">🧩</span>
+        <span class="q-icon">${ICONS.puzzle(19)}</span>
         <div>
           <div class="q-title">车标小拼图</div>
-          <div class="q-sub">四块拼出车标</div>
+          <div class="q-sub">四块拼出完整标</div>
         </div>
       </button>
 
-      <button id="mode-boss" class="quick-card" style="border-color:#FFB3C6;background:#FFF5F8;">
-        <span class="q-emoji">⚡</span>
+      <button id="mode-boss" class="quick-card accent">
+        <span class="q-icon">${ICONS.bolt(19)}</span>
         <div>
           <div class="q-title">极速快答</div>
-          <div class="q-sub">赢双倍车币！</div>
+          <div class="q-sub">快速攒金钥匙</div>
         </div>
       </button>
 
-      <button id="mode-review" class="quick-card" style="border-color:#FFE08A;background:#FFFDF0;">
-        <span class="q-emoji">🔁</span>
+      <button id="mode-review" class="quick-card gold">
+        <span class="q-icon">${ICONS.repeat(19)}</span>
         <div>
           <div class="q-title">错题小复习</div>
-          <div class="q-sub">${mistakeIds.length > 0 ? `${mistakeIds.length}个待巩固` : '目前全都会！'}</div>
+          <div class="q-sub">${mistakeIds.length > 0 ? `${mistakeIds.length} 个待巩固` : '目前全都会'}</div>
         </div>
       </button>
     </div>
   `;
 
+  root.querySelectorAll('[data-preview-id]').forEach((btn) => {
+    btn.onclick = () => {
+      const b = BRAND_MAP[btn.dataset.previewId];
+      if (!b) return;
+      audio.click();
+      audio.speak(b.name);
+    };
+  });
+
   root.querySelector('#btn-instant-play').onclick = () => {
-    audio.click();
+    audio.honk();
     onStartLearnAndPlay(nextBatch);
   };
-
-  root.querySelector('#mode-car').onclick = () => {
-    audio.click();
-    onStartMode('car2logo');
-  };
-  root.querySelector('#mode-mixed').onclick = () => {
-    audio.click();
-    onStartMode('listen');
-  };
-  root.querySelector('#mode-memory').onclick = () => {
-    audio.click();
-    onStartMode('memory');
-  };
-  root.querySelector('#mode-puzzle').onclick = () => {
-    audio.click();
-    onStartMode('puzzle');
-  };
-  root.querySelector('#mode-boss').onclick = () => {
-    audio.click();
-    onStartMode('boss');
-  };
+  root.querySelector('#mode-car').onclick = () => { audio.click(); onStartMode('car2logo'); };
+  root.querySelector('#mode-mixed').onclick = () => { audio.click(); onStartMode('listen'); };
+  root.querySelector('#mode-memory').onclick = () => { audio.click(); onStartMode('memory'); };
+  root.querySelector('#mode-puzzle').onclick = () => { audio.click(); onStartMode('puzzle'); };
+  root.querySelector('#mode-boss').onclick = () => { audio.click(); onStartMode('boss'); };
   root.querySelector('#mode-review').onclick = () => {
     audio.click();
     if (mistakeIds.length === 0) {

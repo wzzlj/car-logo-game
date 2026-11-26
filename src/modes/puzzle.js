@@ -1,9 +1,10 @@
-// 车标四宫格拼图玩法：覆盖本关全部品牌；未选碎片点空位时温柔引导不判错
+// Direction A (Mini Cockpit) 四宫格拼图玩法（无 Emoji，统一机械图标）
 
 import { BRAND_MAP } from '../data/brands.js';
 import { renderLogoSVG } from '../data/logos.js';
 import { audio, randomPraise } from '../engine/audio.js';
 import { store } from '../engine/storage.js';
+import { ICONS } from '../ui/icons.js';
 
 function shuffle(arr) {
   const a = [...arr];
@@ -15,7 +16,7 @@ function shuffle(arr) {
 }
 
 export function runPuzzleMode(root, { brandIds, onAnswerTracked, onBurstFX, onComplete, onExit }) {
-  const queue = [...brandIds]; // 完整覆盖本关全部品牌，不截断
+  const queue = [...brandIds];
   let pIndex = 0;
   let slots = [null, null, null, null];
   let trayOrder = shuffle([0, 1, 2, 3]);
@@ -35,15 +36,15 @@ export function runPuzzleMode(root, { brandIds, onAnswerTracked, onBurstFX, onCo
 
     root.innerHTML = `
       <div class="play-header">
-        <button id="puz-exit" class="icon-btn">⬅️</button>
+        <button id="puz-exit" class="icon-btn" aria-label="返回">${ICONS.back(18)}</button>
         <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
-        <span class="stat-chip" style="font-size:13px;padding:4px 10px;">🧩 ${pIndex + 1}/${queue.length}</span>
+        <span class="stat-chip">${pIndex + 1}/${queue.length}</span>
       </div>
 
       <div class="prompt-card" style="padding:12px;">
-        <h2 class="prompt-title" style="margin-bottom:4px;">🧩 拼出【${brand.name}】车标！</h2>
-        <div id="puz-hint" style="font-size:13px;font-weight:700;color:#5F6C7B;">
-          ${selectedPiece === null ? '👇 第一步：先点下面的一块小碎片' : '👆 第二步：点上面对应的空格放进去！'}
+        <h2 class="prompt-title" style="margin-bottom:4px;">拼出【${brand.name}】车标</h2>
+        <div style="font-size:12px;font-weight:700;color:#646D7E;">
+          ${selectedPiece === null ? '第一步：先点下面的一块小碎片' : '第二步：点上面对应的浅色影子放进去'}
         </div>
       </div>
 
@@ -54,7 +55,7 @@ export function runPuzzleMode(root, { brandIds, onAnswerTracked, onBurstFX, onCo
             <div class="puzzle-slot ${placed !== null ? 'filled' : ''}" data-slot="${slotIdx}">
               ${placed !== null
                 ? `<div class="quad-clip quad-${placed}">${logoHtml}</div>`
-                : `<div class="quad-clip quad-${slotIdx}" style="opacity:0.18;filter:grayscale(1);">${logoHtml}</div>`
+                : `<div class="quad-clip quad-${slotIdx}" style="opacity:0.16;filter:grayscale(1);">${logoHtml}</div>`
               }
             </div>
           `;
@@ -95,14 +96,13 @@ export function runPuzzleMode(root, { brandIds, onAnswerTracked, onBurstFX, onCo
         const slotIdx = Number(el.dataset.slot);
         if (slots[slotIdx] !== null) return;
 
-        // 修复 #5：未先选碎片时温柔引导，不判错！
         if (selectedPiece === null) {
           audio.click();
           audio.speak('先点下面的一块小碎片哦！');
           const tray = root.querySelector('#puz-tray');
           if (tray) {
-            tray.style.animation = 'popGood 0.45s ease';
-            setTimeout(() => { tray.style.animation = ''; }, 480);
+            tray.style.animation = 'popGood 0.4s ease';
+            setTimeout(() => { tray.style.animation = ''; }, 420);
           }
           return;
         }

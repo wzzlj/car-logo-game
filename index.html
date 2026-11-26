@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="认车标" />
-  <meta name="theme-color" content="#FF6B35" />
+  <meta name="theme-color" content="#1A1F29" />
   <title>小小车标大冒险</title>
   <link rel="manifest" href="./manifest.json" />
   <link rel="apple-touch-icon" href="./assets/icons/icon.svg" />
@@ -15,54 +15,62 @@
 </head>
 <body>
   <div id="app" class="app-shell">
-    <!-- Top HUD -->
+    <!-- Top Cockpit HUD -->
     <header id="top-bar" class="top-bar">
       <button id="profile-pill" class="profile-pill" aria-label="切换小朋友档案">
-        <span id="profile-avatar" class="avatar-badge">🚗</span>
+        <span id="profile-avatar" class="avatar-badge">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/><path d="M12 3v6.5M4.5 16l5.5-3M19.5 16l-5.5-3"/></svg>
+        </span>
         <span id="profile-name" class="profile-name">小车手</span>
       </button>
 
       <div class="hud-stats">
         <div class="stat-chip star-chip" title="星星">
-          <span class="stat-icon">⭐</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F59E0B" aria-hidden="true"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21 7 14.2 2 9.3l6.9-1z"/></svg>
           <span id="hud-stars">0</span>
         </div>
-        <div class="stat-chip coin-chip" title="车币">
-          <span class="stat-icon">🪙</span>
-          <span id="hud-coins">0</span>
+        <div class="stat-chip key-chip" title="金钥匙">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#FF4F17" aria-hidden="true"><path d="M7.5 6.5a5.5 5.5 0 1 0 5.15 7.4h3.35v2.6h2.4v-2.6H21v2h2v-4.8H12.65A5.5 5.5 0 0 0 7.5 6.5zm0 8a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg>
+          <span id="hud-keys">0</span>
         </div>
       </div>
 
       <button id="btn-parent" class="icon-btn parent-btn" aria-label="家长模式" title="家长模式">
-        <span>🔒</span>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
       </button>
     </header>
 
-    <!-- Backup / PWA Reminder Banner (conditional) -->
+    <!-- Backup Reminder Banner -->
     <div id="notice-banner" class="notice-banner hidden"></div>
 
     <!-- Main Screen Container -->
     <main id="screen-root" class="screen-root" role="main"></main>
 
-    <!-- Bottom Tab Bar (hidden during active gameplay) -->
+    <!-- Bottom Hardware Dock -->
     <nav id="bottom-nav" class="bottom-nav" aria-label="主导航">
       <button class="nav-tab active" data-tab="map">
-        <span class="nav-emoji">🎮</span>
-        <span class="nav-label">玩一玩</span>
+        <span class="nav-icon">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/><path d="M12 3v6.5M4.5 16l5.5-3M19.5 16l-5.5-3"/></svg>
+        </span>
+        <span class="nav-label">驾驶舱</span>
       </button>
       <button class="nav-tab" data-tab="garage">
-        <span class="nav-emoji">🏠</span>
+        <span class="nav-icon">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5L12 4l9 6.5V20H3v-9.5z"/><path d="M7 20v-7h10v7"/><path d="M7 16h10"/></svg>
+        </span>
         <span class="nav-label">车库</span>
       </button>
       <button class="nav-tab" data-tab="encyclopedia">
-        <span class="nav-emoji">📖</span>
+        <span class="nav-icon">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+        </span>
         <span class="nav-label">图鉴</span>
       </button>
     </nav>
 
-    <!-- Modal / Overlay Layer (Meal Break, Eye Rest, Parent Lock, Celebrations, QR) -->
+    <!-- Modal / Overlay Layer -->
     <div id="overlay-root" class="overlay-root hidden"></div>
-    <!-- Floating Confetti / Star Burst Layer -->
+    <!-- Floating Celebration Particle Layer -->
     <div id="fx-layer" class="fx-layer" aria-hidden="true"></div>
   </div>
 

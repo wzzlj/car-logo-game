@@ -1,9 +1,10 @@
-// 车标翻牌配对玩法：完整覆盖本关全部品牌（超过4个品牌自动分成2轮，每轮3~4对，保证大卡片易点按）
+// Direction A (Mini Cockpit) 翻牌配对玩法（无 Emoji，统一机械图标）
 
 import { BRAND_MAP } from '../data/brands.js';
 import { renderLogoSVG } from '../data/logos.js';
 import { audio, randomPraise } from '../engine/audio.js';
 import { store } from '../engine/storage.js';
+import { ICONS } from '../ui/icons.js';
 
 function shuffle(arr) {
   const a = [...arr];
@@ -15,7 +16,6 @@ function shuffle(arr) {
 }
 
 export function runMemoryMode(root, { brandIds, onAnswerTracked, onBurstFX, onComplete, onExit }) {
-  // 如果超过 4 个品牌（如 6 个），拆成 2 轮（每轮 3 对 = 6 张卡），既不漏品牌又保持超大按钮
   const rounds = [];
   if (brandIds.length <= 4) {
     rounds.push([...brandIds]);
@@ -54,16 +54,14 @@ export function runMemoryMode(root, { brandIds, onAnswerTracked, onBurstFX, onCo
 
     root.innerHTML = `
       <div class="play-header">
-        <button id="mem-exit" class="icon-btn">⬅️</button>
+        <button id="mem-exit" class="icon-btn" aria-label="返回">${ICONS.back(18)}</button>
         <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
-        <span class="stat-chip" style="font-size:13px;padding:4px 10px;">
-          🃏 ${rounds.length > 1 ? `第${roundIdx + 1}/${rounds.length}轮 · ` : ''}${matchedInRound}/${chosen.length}
-        </span>
+        <span class="stat-chip">${rounds.length > 1 ? `${roundIdx + 1}/${rounds.length} · ` : ''}${matchedInRound}/${chosen.length}</span>
       </div>
 
       <div class="prompt-card" style="padding:12px;">
-        <h2 class="prompt-title" style="margin-bottom:6px;">🃏 翻开卡片，找到一样的车标吧！</h2>
-        <button id="mem-speak" class="speak-big-btn btn-sm pulse-speak" style="padding:8px 16px;font-size:15px;">🔊 听规则</button>
+        <h2 class="prompt-title" style="margin-bottom:8px;">翻开卡片，找到一样的车标</h2>
+        <button id="mem-speak" class="speak-big-btn btn-sm" style="padding:8px 16px;font-size:14px;">${ICONS.speaker(16)} 听规则</button>
       </div>
 
       <div class="memory-grid" style="grid-template-columns:repeat(${cols}, 1fr);">
@@ -72,10 +70,8 @@ export function runMemoryMode(root, { brandIds, onAnswerTracked, onBurstFX, onCo
           return `
             <div class="memory-card ${isOpen ? 'flipped' : ''} ${c.matched ? 'matched' : ''}" data-idx="${idx}">
               <div class="memory-inner">
-                <div class="memory-face memory-front">🚗</div>
-                <div class="memory-face memory-back">
-                  ${renderLogoSVG(c.brandId)}
-                </div>
+                <div class="memory-face memory-front">${ICONS.steering(30)}</div>
+                <div class="memory-face memory-back">${renderLogoSVG(c.brandId)}</div>
               </div>
             </div>
           `;
@@ -88,9 +84,8 @@ export function runMemoryMode(root, { brandIds, onAnswerTracked, onBurstFX, onCo
       audio.click();
       onExit();
     };
-
     root.querySelector('#mem-speak').onclick = () => {
-      audio.speak('点一点小汽车卡片，把两个一模一样的车标配成一对吧！');
+      audio.speak('点一点卡片，把两个一模一样的车标配成一对吧！');
     };
 
     root.querySelectorAll('.memory-card').forEach((el) => {
@@ -98,7 +93,6 @@ export function runMemoryMode(root, { brandIds, onAnswerTracked, onBurstFX, onCo
         if (busy) return;
         const idx = Number(el.dataset.idx);
         const card = cards[idx];
-        // 点已配对的卡片可重复听品牌名
         if (card.matched) {
           audio.click();
           audio.speak(BRAND_MAP[card.brandId]?.name || '');

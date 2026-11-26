@@ -1,26 +1,30 @@
-// 本地存储引擎：多孩独立档案、学习报告、错题记忆权重、家长设置、以及跨手机进度导出/导入
+// 本地存储引擎：多孩独立档案、学习报告、错题记忆权重、家长设置、跨手机迁移
+// 奖惩升级：用「10格能量灯 -> 1把金钥匙」替代几百上千的大数字车币，幼儿园小朋友一眼看懂，同时保持同等收集难度
 
 const STORAGE_KEY = 'car_logo_adventure_state_v1';
+export const ENERGY_PER_KEY = 10;
 
-export const AVATARS = ['🚗', '🏎️', '🚙', '🚕', '🚌', '🚒', '🚓', '🚜', '🦖', '🐻'];
+export const AVATARS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
 function todayKey() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-export function createProfile(name = '小车手', avatar = '🚗') {
+export function createProfile(name = '小车手', avatar = 'A') {
   return {
     id: 'p_' + Math.random().toString(36).slice(2, 8),
     name,
     avatar,
     stars: 0,
-    coins: 10,
+    keys: 0,     // 直观金钥匙数量（3~32 把即可解锁全部车库豪车）
+    energy: 3,   // 当前充能格数（0~9，满 10 格自动合成 1 把金钥匙）
+    coins: 0,    // 兼容旧字段
     unlockedLevel: 1,
     levelStars: {},
-    learnedBrands: [], // 已通过“先学后玩”认识过的车标 ID
-    brandStats: {}, // { [brandId]: { r: rightCount, w: wrongCount } }
-    dailySeconds: {}, // { 'YYYY-MM-DD': seconds }
+    learnedBrands: [],
+    brandStats: {},
+    dailySeconds: {},
     garage: {
       ownedCars: ['wuling'],
       activeCar: 'wuling',
@@ -28,26 +32,43 @@ export function createProfile(name = '小车手', avatar = '🚗') {
       activeTheme: 'sunny',
       ownedDecors: [],
       activeDecors: [],
-      carColors: {} // 每辆车的自定义喷漆颜色 { [carId]: '#hex' }
+      carColors: {}
     }
   };
 }
 
+function migrateProfile(p) {
+  const base = createProfile(p.name || '小车手', p.avatar || 'A');
+  const merged = {
+    ...base,
+    ...p,
+    garage: { ...base.garage, ...(p.garage || {}) }
+  };
+  // 将旧版大数字 coins 平滑折算为金钥匙 + 能量格（每 30 车币 = 1 把金钥匙，难度不降且不丢进度）
+  if (typeof p.keys !== 'number' || typeof p.energy !== 'number') {
+    const oldCoins = Number(p.coins || 0);
+    merged.keys = Math.floor(oldCoins / 30);
+    merged.energy = Math.min(ENERGY_PER_KEY - 1, Math.floor((oldCoins % 30) / 3));
+  }
+  if (!merged.garage.carColors) merged.garage.carColors = {};
+  return merged;
+}
+
 function createDefaultState() {
-  const first = createProfile('小车手', '🚗');
+  const first = createProfile('小车手', 'A');
   return {
-    version: 1,
+    version: 2,
     activeProfileId: first.id,
     profiles: [first],
     settings: {
       voiceEnabled: true,
       sfxEnabled: true,
-      scope: 'all', // 'all' | 'cn'
+      scope: 'all', // 'all' (88个) | 'cn' (43个国产)
       mealModeEnabled: false,
-      mealTriggerCount: 3, // 每答3题休息吃饭
-      mealDurationSec: 60, // 每次休息60秒
-      eyeRestMinutes: 15,  // 护眼提醒间隔
-      dailyLimitMinutes: 30, // 每日时长上限（0表示不限制）
+      mealTriggerCount: 3,
+      mealDurationSec: 60,
+      eyeRestMinutes: 15,
+      dailyLimitMinutes: 30,
       lastBackupAt: Date.now()
     }
   };
@@ -70,6 +91,7 @@ class Store {
       return {
         ...createDefaultState(),
         ...parsed,
+        profiles: parsed.profiles.map(migrateProfile),
         settings: { ...createDefaultState().settings, ...(parsed.settings || {}) }
       };
     } catch {
@@ -128,18 +150,39 @@ class Store {
     this.save();
   }
 
+  // 给当前孩子增加能量格，满 10 格自动合成金钥匙，返回本步获得的钥匙数
+  addEnergy(amount) {
+    const p = this.getActiveProfile();
+    const total = (p.energy || 0) + amount;
+    const keysGained = Math.floor(total / ENERGY_PER_KEY);
+    p.keys = (p.keys || 0) + keysGained;
+    p.energy = total % ENERGY_PER_KEY;
+    this.save();
+    return { keysGained, energy: p.energy, keys: p.keys };
+  }
+
+  spendKeys(cost) {
+    const p = this.getActiveProfile();
+    if ((p.keys || 0) < cost) return false;
+    p.keys -= cost;
+    this.save();
+    return true;
+  }
+
   recordAnswer(brandId, isCorrect) {
     const p = this.getActiveProfile();
     if (!Array.isArray(p.learnedBrands)) p.learnedBrands = [];
     if (!p.learnedBrands.includes(brandId)) p.learnedBrands.push(brandId);
     if (!p.brandStats[brandId]) p.brandStats[brandId] = { r: 0, w: 0 };
+    let res = { keysGained: 0, energy: p.energy, keys: p.keys };
     if (isCorrect) {
       p.brandStats[brandId].r += 1;
-      p.coins += 3;
+      res = this.addEnergy(1); // 每答对 1 题点亮 1 格能量灯
     } else {
       p.brandStats[brandId].w += 1;
+      this.save();
     }
-    this.save();
+    return res;
   }
 
   markLearned(brandIds) {
@@ -158,41 +201,23 @@ class Store {
     return [...set];
   }
 
-  completeRound(starsEarned, rewardCoins) {
+  // 通关一局奖励星星 + 额外能量格（一般 3~6 格，Boss 极速快答 8 格）
+  completeRound(starsEarned, bonusEnergy = 3) {
     const p = this.getActiveProfile();
     p.stars += starsEarned;
-    p.coins += rewardCoins;
-    this.save();
-  }
-
-  completeLevel(levelId, starsEarned, rewardCoins) {
-    const p = this.getActiveProfile();
-    const prev = p.levelStars[levelId] || 0;
-    if (starsEarned > prev) {
-      p.stars += starsEarned - prev;
-      p.levelStars[levelId] = starsEarned;
-    }
-    p.coins += rewardCoins;
-    if (levelId >= p.unlockedLevel) {
-      p.unlockedLevel = levelId + 1;
-    }
-    this.save();
+    return this.addEnergy(bonusEnergy);
   }
 
   resetActiveProgress() {
     const p = this.getActiveProfile();
     p.stars = 0;
-    p.coins = 10;
+    p.keys = 0;
+    p.energy = 3;
+    p.coins = 0;
     p.unlockedLevel = 1;
     p.levelStars = {};
     p.learnedBrands = [];
     p.brandStats = {};
-    this.save();
-  }
-
-  jumpToLevel(levelId) {
-    const p = this.getActiveProfile();
-    p.unlockedLevel = Math.max(p.unlockedLevel, levelId);
     this.save();
   }
 
@@ -208,8 +233,7 @@ class Store {
     return Math.floor((p.dailySeconds[todayKey()] || 0) / 60);
   }
 
-  // 获取需要重点复习的错题车标
-  getMistakeBrandIds(limit = 4) {
+  getMistakeBrandIds(limit = 6) {
     const p = this.getActiveProfile();
     return Object.entries(p.brandStats)
       .filter(([, s]) => s.w > 0 && s.w >= s.r)
@@ -218,7 +242,6 @@ class Store {
       .map(([id]) => id);
   }
 
-  // 导出为高压缩比跨设备迁移码 CAR2:（精简键名、仅保留近7天时长，体积缩小约70%，确保二维码始终清晰可扫）
   exportCode() {
     const recentKeys = (obj) => {
       const entries = Object.entries(obj || {}).sort((a, b) => b[0].localeCompare(a[0])).slice(0, 7);
@@ -241,9 +264,8 @@ class Store {
         n: p.name,
         av: p.avatar,
         st: p.stars,
-        co: p.coins,
-        ul: p.unlockedLevel,
-        ls: p.levelStars,
+        ky: p.keys,
+        en: p.energy,
         bs: p.brandStats,
         ds: recentKeys(p.dailySeconds),
         g: [
@@ -267,7 +289,6 @@ class Store {
     return 'CAR2:' + b64;
   }
 
-  // 导入迁移码（同时兼容旧版 CAR1: 与精简版 CAR2:）
   importCode(rawCode) {
     const cleaned = (rawCode || '').trim();
     const isV2 = cleaned.startsWith('CAR2:');
@@ -289,7 +310,7 @@ class Store {
       }
       const s = parsed.s || {};
       this.state = {
-        version: 1,
+        version: 2,
         activeProfileId: parsed.a || parsed.p[0].i,
         settings: {
           ...createDefaultState().settings,
@@ -303,14 +324,14 @@ class Store {
           dailyLimitMinutes: s.d ?? 30,
           lastBackupAt: Date.now()
         },
-        profiles: parsed.p.map((x) => ({
+        profiles: parsed.p.map((x) => migrateProfile({
           id: x.i,
           name: x.n || '小车手',
-          avatar: x.av || '🚗',
+          avatar: x.av || 'A',
           stars: x.st || 0,
+          keys: typeof x.ky === 'number' ? x.ky : undefined,
+          energy: typeof x.en === 'number' ? x.en : undefined,
           coins: x.co || 0,
-          unlockedLevel: x.ul || 1,
-          levelStars: x.ls || {},
           brandStats: x.bs || {},
           dailySeconds: x.ds || {},
           garage: {
@@ -331,6 +352,7 @@ class Store {
       this.state = {
         ...createDefaultState(),
         ...parsed,
+        profiles: parsed.profiles.map(migrateProfile),
         settings: { ...createDefaultState().settings, ...(parsed.settings || {}), lastBackupAt: Date.now() }
       };
     }

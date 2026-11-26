@@ -1,6 +1,6 @@
-// 应用主控制器：点开即玩的“学新标 + 混玩已学车标”循环 + 自由小游戏 + 吃饭模式与护眼计时
+// 应用主控制器：Direction A 迷你驾驶舱 + 88车标先学再混玩循环 + 金钥匙能量奖励 + 吃饭/护眼计时
 
-import { BRANDS, BRAND_MAP } from './data/brands.js';
+import { BRAND_MAP } from './data/brands.js';
 import { MIXED_LEARNING_ORDER } from './data/levels.js';
 import { store } from './engine/storage.js';
 import { audio } from './engine/audio.js';
@@ -38,10 +38,9 @@ if ('serviceWorker' in navigator) {
 function syncHUD() {
   const p = store.getActiveProfile();
   audio.configure(store.state.settings);
-  document.getElementById('profile-avatar').textContent = p.avatar;
   document.getElementById('profile-name').textContent = p.name;
   document.getElementById('hud-stars').textContent = p.stars;
-  document.getElementById('hud-coins').textContent = p.coins;
+  document.getElementById('hud-keys').textContent = p.keys || 0;
 
   bottomNav.classList.toggle('hidden', inGameplay);
   document.querySelectorAll('.nav-tab').forEach((tab) => {
@@ -51,7 +50,7 @@ function syncHUD() {
   if (!inGameplay && store.needsBackupReminder()) {
     noticeBanner.classList.remove('hidden');
     noticeBanner.innerHTML = `
-      <span>💾 好久没备份啦，建议去家长模式导出存档防丢失</span>
+      <span>好久没备份啦，建议去家长模式导出存档防丢失</span>
       <button id="banner-backup-btn">去备份</button>
     `;
     noticeBanner.querySelector('#banner-backup-btn').onclick = () => {
@@ -86,16 +85,13 @@ function getPlayablePool() {
     const b = BRAND_MAP[id];
     return b && (scope === 'cn' ? b.origin === 'cn' : true);
   });
-  // 如果还没学够 6 个，自动补入前几个热门国产+国际明星品牌，确保点开就能玩
   const fallback = MIXED_LEARNING_ORDER.filter((id) => {
     const b = BRAND_MAP[id];
     return b && (scope === 'cn' ? b.origin === 'cn' : true);
   });
-  const merged = [...new Set([...learned, ...fallback.slice(0, 8)])];
-  return merged;
+  return [...new Set([...learned, ...fallback.slice(0, 8)])];
 }
 
-// 核心循环：先学 3 个新标（国产+国际混合）-> 自动把以前学过的全混在一起识别玩！
 function startLearnAndPlay(newBatchIds) {
   inGameplay = true;
   syncHUD();
@@ -111,24 +107,24 @@ function startLearnAndPlay(newBatchIds) {
     onComplete: () => {
       store.markLearned(newBatchIds);
       const learnedPool = getPlayablePool();
-      // 混合：本次新学的 3 个 + 从以前学过的随机抽 3 个 = 6 题趣味混合大挑战
       const oldOnes = learnedPool.filter((id) => !newBatchIds.includes(id)).sort(() => Math.random() - 0.5).slice(0, 3);
       const roundIds = [...newBatchIds, ...oldOnes];
-      const rewardCoins = 20;
+      const bonusEnergy = 4;
 
       runQuizMode(screenRoot, {
-        level: { title: '混合认车标挑战', mode: 'mixed', rewardCoins },
+        level: { title: '混合认车标挑战', mode: 'mixed' },
         brandIds: roundIds,
         isPaused: () => !overlayRoot.classList.contains('hidden'),
         onAnswerTracked: handleAnswerTracked,
         onBurstFX: overlays.burstFX,
         onComplete: ({ stars }) => {
-          store.completeRound(stars, rewardCoins);
+          const { keysGained } = store.completeRound(stars, bonusEnergy);
           const nextBatch = getNextBatchToLearn(store.state.settings.scope, 3);
           overlays.showVictory({
             title: '本轮车标挑战',
             stars,
-            rewardCoins,
+            bonusEnergy,
+            keysGained,
             onNext: () => startLearnAndPlay(nextBatch),
             onMap: exitToHome
           });
@@ -140,7 +136,6 @@ function startLearnAndPlay(newBatchIds) {
   });
 }
 
-// 自由模式：真车放大猜 / 听音混搭 / 翻牌 / 拼图 / 极速快答
 function startFreeMode(mode) {
   const pool = getPlayablePool().sort(() => Math.random() - 0.5);
   inGameplay = true;
@@ -153,27 +148,28 @@ function startFreeMode(mode) {
   };
 
   const modeConfig = {
-    car2logo: { title: '真车放大猜', count: 6, rewardCoins: 20 },
-    listen: { title: '听音混搭猜', count: 6, rewardCoins: 18 },
-    memory: { title: '翻牌记忆乐', count: 4, rewardCoins: 20 },
-    puzzle: { title: '车标小拼图', count: 3, rewardCoins: 22 },
-    boss: { title: '极速快答挑战', count: 8, rewardCoins: 35, timeLimit: 45 }
+    car2logo: { title: '真车放大猜', count: 6, bonusEnergy: 4 },
+    listen: { title: '听音混搭猜', count: 6, bonusEnergy: 3 },
+    memory: { title: '翻牌记忆乐', count: 4, bonusEnergy: 4 },
+    puzzle: { title: '车标小拼图', count: 3, bonusEnergy: 5 },
+    boss: { title: '极速快答挑战', count: 8, bonusEnergy: 7, timeLimit: 45 }
   };
   const cfg = modeConfig[mode] || modeConfig.listen;
   const chosen = pool.slice(0, cfg.count);
 
   const common = {
-    level: { title: cfg.title, mode, timeLimit: cfg.timeLimit || 0, rewardCoins: cfg.rewardCoins },
+    level: { title: cfg.title, mode, timeLimit: cfg.timeLimit || 0 },
     brandIds: chosen,
     isPaused: () => !overlayRoot.classList.contains('hidden'),
     onAnswerTracked: handleAnswerTracked,
     onBurstFX: overlays.burstFX,
     onComplete: ({ stars }) => {
-      store.completeRound(stars, cfg.rewardCoins);
+      const { keysGained } = store.completeRound(stars, cfg.bonusEnergy);
       overlays.showVictory({
         title: cfg.title,
         stars,
-        rewardCoins: cfg.rewardCoins,
+        bonusEnergy: cfg.bonusEnergy,
+        keysGained,
         onNext: () => startFreeMode(mode),
         onMap: exitToHome
       });
@@ -194,18 +190,20 @@ function startMistakeReview(ids) {
     currentTab = 'map';
     renderCurrentTab();
   };
+  const bonusEnergy = 4;
   runQuizMode(screenRoot, {
-    level: { title: '错题小复习', mode: 'mixed', rewardCoins: 18 },
+    level: { title: '错题小复习', mode: 'mixed' },
     brandIds: ids,
     isPaused: () => !overlayRoot.classList.contains('hidden'),
     onAnswerTracked: handleAnswerTracked,
     onBurstFX: overlays.burstFX,
     onComplete: ({ stars }) => {
-      store.completeRound(stars, 18);
+      const { keysGained } = store.completeRound(stars, bonusEnergy);
       overlays.showVictory({
         title: '错题小复习',
         stars,
-        rewardCoins: 18,
+        bonusEnergy,
+        keysGained,
         onNext: null,
         onMap: exitToHome
       });
