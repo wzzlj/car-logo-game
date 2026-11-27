@@ -898,7 +898,7 @@ input, textarea, select {
 .garage-stage {
   border-radius: var(--radius-xl);
   padding: 14px 16px 14px;
-  min-height: 224px;
+  min-height: 228px;
   position: relative;
   overflow: hidden;
   border: 2px solid var(--carbon);
@@ -907,6 +907,34 @@ input, textarea, select {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  background: #1A1F29;
+}
+
+.theme-scene-svg,
+.theme-decors-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+}
+.theme-scene-svg { z-index: 0; }
+.theme-decors-svg { z-index: 1; }
+
+.theme-thumb-box {
+  position: relative;
+  width: 100%;
+  height: 76px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(23, 27, 36, 0.12);
+}
+
+.decor-icon-box {
+  display: grid;
+  place-items: center;
+  padding: 4px 0;
 }
 
 .garage-top-bar {

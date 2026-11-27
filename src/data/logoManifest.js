@@ -13,7 +13,7 @@ export const REAL_LOGO_MAP = {
   "wey": "./assets/logos/wey.png",
   "ora": "./assets/logos/ora.svg",
   "changan": "./assets/logos/changan.svg",
-  "deepal": "./assets/logos/deepal.svg",
+  "deepal": "./assets/logos/deepal.png",
   "avatr": "./assets/logos/avatr.svg",
   "chery": "./assets/logos/chery.svg",
   "exeed": "./assets/logos/exeed.png",

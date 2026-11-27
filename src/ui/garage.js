@@ -1,6 +1,13 @@
-// Direction A (Mini Cockpit) 车库喷漆房：11 款专属精细车型 + 9 色烤漆喷涂 + 直观金钥匙进度解锁
+// Direction A (Mini Cockpit) 车库喷漆房：11 款专属精细车型 + 4套插画级实景主题 + 6套可视化实景装备 + 金钥匙解锁
 
-import { GARAGE_CARS, GARAGE_THEMES, GARAGE_DECORS } from '../data/garage.js';
+import {
+  GARAGE_CARS,
+  GARAGE_THEMES,
+  GARAGE_DECORS,
+  renderThemeBackdropSVG,
+  renderDecorIconSVG,
+  renderSceneDecorsSVG
+} from '../data/garage.js';
 import { BRAND_MAP } from '../data/brands.js';
 import { renderCarSVG, getRealCarPhotoUrl } from '../data/cars.js';
 import { renderLogoSVG } from '../data/logos.js';
@@ -48,21 +55,18 @@ export function renderGarageScreen(root, { onBurstFX }) {
   const activeCarBrand = BRAND_MAP[g.activeCar] || BRAND_MAP.wuling;
   const activeCarMeta = GARAGE_CARS.find((c) => c.id === g.activeCar) || GARAGE_CARS[0];
   const activeTheme = GARAGE_THEMES.find((t) => t.id === g.activeTheme) || GARAGE_THEMES[0];
-  const activeDecorObjs = GARAGE_DECORS.filter((d) => g.activeDecors.includes(d.id));
   const currentColor = g.carColors[activeCarBrand.id] || activeCarBrand.carColor;
   const currentColorObj = PAINT_COLORS.find((c) => c.hex.toLowerCase() === currentColor.toLowerCase());
   const keys = profile.keys || 0;
   const energy = profile.energy || 0;
 
   root.innerHTML = `
-    <div class="garage-stage" style="background:${activeTheme.bg}">
+    <div class="garage-stage">
+      ${renderThemeBackdropSVG(activeTheme.id)}
+      ${renderSceneDecorsSVG(g.activeDecors)}
+
       <div class="garage-top-bar">
-        <div class="garage-decor-row">
-          ${activeDecorObjs.length > 0
-            ? activeDecorObjs.map((d) => `<span class="decor-tag">${d.name}</span>`).join('')
-            : `<span class="decor-tag">${activeTheme.tag} · BAY 01</span>`
-          }
-        </div>
+        <span class="decor-tag">${activeTheme.name}</span>
         <button id="btn-toggle-view" class="garage-view-pill">
           ${viewMode === 'paint' ? `${ICONS.camera(14)} 实拍对照` : `${ICONS.paint(14)} 喷漆展车`}
         </button>
@@ -211,13 +215,13 @@ export function renderGarageScreen(root, { onBurstFX }) {
       const ready = !owned && keys >= t.costKeys;
       return `
         <div class="shop-card ${equipped ? 'equipped' : ready ? 'ready-unlock' : ''}">
-          <div style="width:100%;height:64px;border-radius:12px;background:${t.bg};display:grid;place-items:center;color:#FFF;font-family:ui-monospace,monospace;font-size:12px;font-weight:900;letter-spacing:0.1em;border:1px solid rgba(0,0,0,0.12);">
-            ${t.tag}
+          <div class="theme-thumb-box">
+            ${renderThemeBackdropSVG(t.id)}
           </div>
           <div style="font-size:13px;font-weight:900;">${t.name}</div>
           ${!owned ? renderKeyProgress(keys, t.costKeys) : ''}
           <button class="btn btn-sm ${equipped ? 'btn-success' : owned ? 'btn-secondary' : ready ? 'btn-primary' : 'btn-soft'} btn-block" data-theme-id="${t.id}">
-            ${equipped ? `${ICONS.check(14)} 使用中` : owned ? '切换主题' : ready ? `${ICONS.keySolid(14)} 立即装修` : `${ICONS.lock(13)} ${t.costKeys} 把钥匙`}
+            ${equipped ? `${ICONS.check(14)} 使用中` : owned ? '切换场景' : ready ? `${ICONS.keySolid(14)} 立即装修` : `${ICONS.lock(13)} ${t.costKeys} 把钥匙`}
           </button>
         </div>
       `;
@@ -254,8 +258,8 @@ export function renderGarageScreen(root, { onBurstFX }) {
       const ready = !owned && keys >= d.costKeys;
       return `
         <div class="shop-card ${active ? 'equipped' : ready ? 'ready-unlock' : ''}">
-          <div style="width:52px;height:52px;border-radius:14px;background:#1A1F29;color:#FF6433;display:grid;place-items:center;font-family:ui-monospace,monospace;font-size:12px;font-weight:900;">
-            ${d.badge}
+          <div class="decor-icon-box">
+            ${renderDecorIconSVG(d.id)}
           </div>
           <div style="font-size:13px;font-weight:900;">${d.name}</div>
           ${!owned ? renderKeyProgress(keys, d.costKeys) : ''}
@@ -281,7 +285,7 @@ export function renderGarageScreen(root, { onBurstFX }) {
           g.activeDecors.push(id);
           store.save();
           audio.win();
-          audio.speak(`解锁了${decor.name}，摆进车库啦！`);
+          audio.speak(`解锁了${decor.name}，已经摆进车库啦！`);
           if (onBurstFX) onBurstFX(e.clientX || window.innerWidth / 2, e.clientY || 300);
         } else {
           const need = decor.costKeys - (profile.keys || 0);

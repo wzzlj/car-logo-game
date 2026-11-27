@@ -1,4 +1,4 @@
-const CACHE_NAME = 'car-logo-game-v6';
+const CACHE_NAME = 'car-logo-game-v7';
 const CORE_ASSETS = [
   "./",
   "./index.html",
@@ -46,7 +46,7 @@ const CORE_ASSETS = [
   "./assets/logos/chery.svg",
   "./assets/logos/chevrolet.svg",
   "./assets/logos/citroen.svg",
-  "./assets/logos/deepal.svg",
+  "./assets/logos/deepal.png",
   "./assets/logos/denza.svg",
   "./assets/logos/dongfeng.svg",
   "./assets/logos/exeed.png",
